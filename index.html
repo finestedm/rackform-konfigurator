@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c1721">
+  <meta name="description" content="Konfigurator układu regałów paletowych z doborem długości trawersów i rysunkiem poglądowym.">
+  <title>Rackform — konfigurator regałów paletowych</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Rackform, początek strony"><span class="brand-mark">R<span></span></span><span>RACKFORM<small>STUDIO KONFIGURACJI</small></span></a>
+    <div class="topbar-right"><span class="online-dot"></span> KONFIGURATOR ONLINE <span class="topbar-divider"></span> WERSJA 01</div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-line"></span> PROJEKTUJ ŚWIADOMIE</div>
+        <h1>Twój regał.<br><em>Twój układ.</em></h1>
+        <p>Skonfiguruj wymiary palety, sekcje i wyposażenie. Zobacz dobór trawersów oraz gabaryty układu na bieżąco.</p>
+      </div>
+      <div class="hero-meta"><span>01 / 03</span><span>WYMIARY → UKŁAD → PODSUMOWANIE</span></div>
+    </section>
+
+    <div class="workspace">
+      <div class="config-column">
+        <section class="panel" aria-labelledby="pallet-title">
+          <div class="panel-heading"><div><span class="step">01</span><h2 id="pallet-title">Parametry palety</h2></div><p>Wymiary ładunku w milimetrach</p></div>
+          <div class="field-grid three">
+            <label class="field"><span>Szerokość palety</span><div class="input-unit"><input id="pallet-width" type="number" min="400" max="1800" step="10" value="800"><b>mm</b></div></label>
+            <label class="field"><span>Głębokość palety</span><div class="input-unit"><input id="pallet-depth" type="number" min="400" max="2000" step="10" value="1200"><b>mm</b></div></label>
+            <label class="field"><span>Domyślna wysokość ładunku</span><div class="input-unit"><input id="pallet-height" type="number" min="300" max="2500" step="10" value="1400"><b>mm</b></div></label>
+          </div>
+          <div class="inline-control"><span>Tryb doboru</span><div class="segmented" role="group" aria-label="Tryb doboru"><button type="button" data-standard="standard" class="active">Standard</button><button type="button" data-standard="nfpa">NFPA 13</button></div></div>
+          <p class="hint" id="clearance-note"></p>
+        </section>
+
+        <section class="panel" aria-labelledby="layout-title">
+          <div class="panel-heading"><div><span class="step">02</span><h2 id="layout-title">Układ regałów</h2></div><p>Sekcje i rzędy</p></div>
+          <div class="field-grid two layout-inputs">
+            <label class="field"><span>Poziomy składowania</span><div class="input-unit"><input id="levels" type="number" min="1" max="8" step="1" value="3"><b>poz.</b></div></label>
+            <label class="field"><span>Rodzaj wózka</span><select id="truck"><option value="counterbalance">Czołowy</option><option value="reach" selected>Reach truck</option><option value="vna">Systemowy VNA</option></select></label>
+          </div>
+          <div class="level-heading"><strong>Wysokości poziomów</strong><span>światło między belkami i wysokość ładunku</span></div>
+          <div id="level-list" class="level-list"></div>
+          <p class="hint level-hint">Dla każdego poziomu przyjmujemy 200 mm luzu nad ładunkiem. Jeśli zadane światło jest za małe, obliczenia podnoszą je do wymaganej wartości.</p>
+          <div class="section-list" id="rack-list"></div>
+          <div class="add-actions"><button type="button" class="add-button" id="add-single"><span>＋</span> Dodaj regał pojedynczy</button><button type="button" class="add-button" id="add-double"><span>＋</span> Dodaj regał podwójny</button></div>
+        </section>
+
+        <section class="panel" aria-labelledby="equipment-title">
+          <div class="panel-heading"><div><span class="step">03</span><h2 id="equipment-title">Wyposażenie</h2></div><p>Jednakowe dla całego układu</p></div>
+          <div class="field-grid two">
+            <label class="field"><span>Wypełnienie poziomów</span><select id="decking"><option value="mesh">Panel siatkowy</option><option value="grate">Krata</option><option value="bars">Poprzeczki</option><option value="board">Płyta wiórowa</option></select></label>
+            <label class="field"><span>Ochrona słupów</span><select id="protection"><option value="none">Brak osłon</option><option value="barrier">Odbojnica</option><option value="polymer-asafe">Odbojnice z tworzywa · typ A-SAFE</option><option value="polymer-ampere">Odbojnice z tworzywa · typ Ampere</option></select></label>
+            <label class="field"><span>Zabezpieczenie tyłu regału</span><select id="rear-protection"><option value="none">Brak</option><option value="mesh">Wygrodzenie siatkowe pleców</option><option value="backstops">Backstopy</option></select></label>
+          </div>
+        </section>
+      </div>
+
+      <aside class="results-column" aria-label="Wynik konfiguracji">
+        <div class="result-card">
+          <div class="result-head"><div><span class="result-kicker">PODGLĄD KONFIGURACJI</span><h2>Układ regałów</h2></div><span class="live-pill"><span></span> NA ŻYWO</span></div>
+          <div class="view-switch" role="group" aria-label="Wybierz widok układu">
+            <button type="button" data-view="plan" class="active" aria-pressed="true">Plan układu</button>
+            <button type="button" data-view="front" aria-pressed="false">Widok frontowy</button>
+            <button type="button" data-view="threeD" aria-pressed="false">Widok 3D</button>
+          </div>
+          <div class="drawing-toolbar"><span id="drawing-title">PLAN WSZYSTKICH REGAŁÓW</span><span id="drawing-scale">RYSUNEK POGLĄDOWY</span></div>
+          <div class="drawing-wrap" id="drawing-wrap"><svg id="rack-drawing" role="img" aria-label="Plan regałów"></svg></div>
+          <div class="view-controls" id="view-controls" hidden><span>Przeciągnij rysunek, aby obrócić</span><div><button type="button" id="rotate-left" aria-label="Obróć widok 3D w lewo">↶</button><button type="button" id="rotate-right" aria-label="Obróć widok 3D w prawo">↷</button><button type="button" id="rotate-reset">Reset widoku</button></div></div>
+          <div class="diagram-legend"><span><i class="legend-frame"></i> Słupy RAL 5010</span><span><i class="legend-beam"></i> Belki RAL 1007 · 150 mm</span><span><i class="legend-galva"></i> Diagonale galva</span><span id="post-guard-legend" hidden><i class="legend-post-guard"></i> Odbojnice RAL 1004</span><span><i class="legend-pallet"></i> Paleta / ładunek</span><span><i class="legend-aisle"></i> Korytarz pracy</span><span id="rear-legend" hidden><i class="legend-rear"></i><span id="rear-legend-label"></span></span></div>
+          <div class="metric-grid">
+            <div class="metric"><span>DŁUGOŚĆ ZABUDOWY*</span><strong id="total-length">—</strong><small>najdłuższy rząd; profile 85 / 100 / 120 mm</small></div>
+            <div class="metric"><span>KORYTARZ PRACY</span><strong id="aisle">—</strong><small id="aisle-note">wartość orientacyjna</small></div>
+            <div class="metric"><span>MIEJSCA PALETOWE</span><strong id="pallet-spots">—</strong><small>wszystkie poziomy i strony</small></div>
+            <div class="metric"><span>WYSOKOŚĆ REGAŁU</span><strong id="rack-height">—</strong><small>szacunek do projektu wstępnego</small></div>
+          </div>
+          <div id="beam-results" class="beam-results"></div>
+          <div id="notices" class="notices" aria-live="polite"></div>
+          <p class="footnote">* Całkowita długość zależy od dobranego profilu słupów (85 / 100 / 120 mm). Barwy RAL na ekranie są przybliżone. Wizualizacja i wymiary są poglądowe; nośność, kotwienie, wysokość oraz wymagania przeciwpożarowe wymagają weryfikacji projektowej.</p>
+          <div class="result-actions"><button type="button" id="print-button" class="primary-button">Drukuj / zapisz PDF <span>↗</span></button><button type="button" id="reset-button" class="secondary-button">Wyczyść</button></div>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <footer><span>RACKFORM / KONFIGURATOR WSTĘPNY</span><span>PRECYZJA ZACZYNA SIĘ OD PLANU.</span></footer>
+  <script defer src="./src/calculator.js"></script>
+  <script defer src="./src/visuals.js"></script>
+  <script defer src="./src/app.js"></script>
+</body>
+</html>
