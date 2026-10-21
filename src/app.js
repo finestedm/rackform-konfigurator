@@ -1,4 +1,4 @@
-const { calculate, CLEARANCE, BEAM_HEIGHT, TRUCKS } = globalThis.RackformCalculator;
+const { calculate, CLEARANCE, BEAM_HEIGHT, LEVEL_STEP, FRAME_HEIGHT_STEP, VERTICAL_CLEARANCE, TRUCKS } = globalThis.RackformCalculator;
 const { COLORS, drawPlan } = globalThis.RackformVisuals;
 
 const $ = selector => document.querySelector(selector);
@@ -11,13 +11,17 @@ let scene3d = null;
 let currentResult;
 
 function defaultState() {
-  return { palletWidth: 800, palletDepth: 1200, palletHeight: 1400, levels: 3, levelDetails: Array.from({length:3}, () => ({clearHeight:1600,loadHeight:1400})), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', sections: [3, 2] }] };
+  return { schemaVersion: 2, palletWidth: 800, palletDepth: 1200, palletHeight: 1400, frameDepth: null, frameHeight: null, levels: 3, levelDetails: Array.from({length:3}, () => ({clearHeight:1500,loadHeight:1400})), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', sections: [3, 2] }] };
 }
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem('rackform-v1'));
     if (saved && Array.isArray(saved.racks) && saved.racks.length && saved.racks.every(r => Array.isArray(r.sections) && r.sections.length)) {
-      saved.levelDetails = Array.from({length:saved.levels}, (_, index) => saved.levelDetails?.[index] ?? {clearHeight:saved.palletHeight+200,loadHeight:saved.palletHeight});
+      saved.levelDetails = Array.from({length:saved.levels}, (_, index) => saved.levelDetails?.[index] ?? {clearHeight:saved.palletHeight+VERTICAL_CLEARANCE,loadHeight:saved.palletHeight});
+      if (!saved.schemaVersion) saved.levelDetails.forEach(detail => { if (detail.clearHeight === detail.loadHeight + 200) detail.clearHeight = detail.loadHeight + VERTICAL_CLEARANCE; });
+      saved.schemaVersion = 2;
+      saved.frameDepth = saved.frameDepth == null || !Number.isFinite(Number(saved.frameDepth)) ? null : Number(saved.frameDepth);
+      saved.frameHeight = saved.frameHeight == null || !Number.isFinite(Number(saved.frameHeight)) ? null : Number(saved.frameHeight);
       if (['polymer-asafe','polymer-ampere'].includes(saved.protection)) saved.protection = 'polymer';
       saved.protection = ['none','barrier','polymer'].includes(saved.protection) ? saved.protection : 'none';
       saved.decking = ['none','mesh','grate','bars','board'].includes(saved.decking) ? saved.decking : 'none';
@@ -50,9 +54,9 @@ function updateFromInputs() {
   state.levels = number('#levels', 1, 8);
   if (state.palletHeight !== previousHeight) state.levelDetails.forEach(detail => {
     if (detail.loadHeight === previousHeight) detail.loadHeight = state.palletHeight;
-    if (detail.clearHeight === previousHeight + 200) detail.clearHeight = state.palletHeight + 200;
+    if (detail.clearHeight === previousHeight + VERTICAL_CLEARANCE) detail.clearHeight = state.palletHeight + VERTICAL_CLEARANCE;
   });
-  while (state.levelDetails.length < state.levels) state.levelDetails.push({clearHeight:state.palletHeight+200,loadHeight:state.palletHeight});
+  while (state.levelDetails.length < state.levels) state.levelDetails.push({clearHeight:state.palletHeight+VERTICAL_CLEARANCE,loadHeight:state.palletHeight});
   state.levelDetails.length = state.levels;
   state.truck = $('#truck').value;
   state.decking = $('#decking').value;
@@ -72,13 +76,13 @@ function renderLevelCards(result) {
       const field = document.createElement('label'); field.className = 'field';
       const caption = document.createElement('span'); caption.textContent = label;
       const unit = document.createElement('div'); unit.className = 'input-unit';
-      const input = document.createElement('input'); input.type = 'number'; input.min = '300'; input.max = '4000'; input.step = '10'; input.value = value; input.setAttribute('aria-label', `${label}, poziom ${index+1}`);
-      input.addEventListener('change', () => { const value = Number(input.value); state.levelDetails[index][key] = Number.isFinite(value) ? Math.max(300, Math.min(4000, value)) : 300; render(); });
+      const input = document.createElement('input'); input.type = 'number'; input.min = '300'; input.max = '4000'; input.step = key === 'clearHeight' ? String(LEVEL_STEP) : '10'; input.value = value; input.setAttribute('aria-label', `${label}, poziom ${index+1}`);
+      input.addEventListener('change', () => { const value = Number(input.value); const bounded = Number.isFinite(value) ? Math.max(300, Math.min(4000, value)) : 300; state.levelDetails[index][key] = key === 'clearHeight' ? Math.round(bounded / LEVEL_STEP) * LEVEL_STEP : bounded; render(); });
       const suffix = document.createElement('b'); suffix.textContent = 'mm'; unit.append(input, suffix); field.append(caption, unit); return field;
     };
     const fields = document.createElement('div'); fields.className = 'level-fields';
     fields.append(createField('Światło poziomu', 'clearHeight', level.clearHeight), createField('Wysokość ładunku', 'loadHeight', level.loadHeight));
-    const computed = document.createElement('small'); computed.className = 'level-computed'; computed.textContent = level.isFloor ? `Paleta na posadzce · pierwsza belka nad nią na ${format(level.effectiveClear)}` : `Belka na ${format(level.beamElevation)} · wymagane światło ${format(level.effectiveClear)}`;
+    const computed = document.createElement('small'); computed.className = 'level-computed'; computed.textContent = level.isFloor ? `Paleta na posadzce · pierwsza belka nad nią na ${format(level.effectiveClear)}` : `Belka na ${format(level.beamElevation)} · przyjęte światło ${format(level.effectiveClear)}`;
     card.append(name, fields, computed); list.append(card);
   });
 }
@@ -203,9 +207,16 @@ function renderDrawing(result) {
 }
 
 function render() {
-  const result = calculate(state);
+  let result = calculate(state);
+  if (state.frameHeight != null && state.frameHeight < result.requiredFrameHeight) { state.frameHeight = result.requiredFrameHeight; result = calculate(state); }
   currentResult = result;
   save();
+  $('#frame-depth').value = result.frameDepth;
+  $('#frame-height').value = result.rackHeight;
+  $('#frame-depth-auto').hidden = state.frameDepth == null;
+  $('#frame-height-auto').hidden = state.frameHeight == null;
+  $('#frame-height').min = result.requiredFrameHeight;
+  $('#frame-note').textContent = `Głębokość ramy ${format(result.frameDepth)}; domyślnie 100 mm mniej niż ładunek. Wysokość co ${FRAME_HEIGHT_STEP} mm (minimum ${format(result.requiredFrameHeight)}). ${result.supportRequired ? 'Gdy rama nie jest głębsza od ładunku, wymagane jest wypełnienie, np. poprzeczki lub krata.' : ''}`;
   document.querySelectorAll('[data-standard]').forEach(button => button.classList.toggle('active', button.dataset.standard === state.standard));
   $('#clearance-note').textContent = `Założony minimalny luz boczny i między paletami: ${CLEARANCE[state.standard]} mm. Dobór z długości ${state.standard === 'standard' ? '1000 / 1900 / 2700 / 3600' : '1000 / 1900 / 2850 / 3800'} mm.`;
   renderLevelCards(result); renderRackCards(result); renderDrawing(result);
@@ -217,6 +228,8 @@ function render() {
   const beamResults = $('#beam-results'); beamResults.replaceChildren();
   const heading = document.createElement('div'); heading.className = 'beam-title'; heading.textContent = 'DOBÓR TRAWERSÓW / WYMIARY RZĘDÓW'; beamResults.append(heading);
   result.rows.forEach((row,index) => { const line = document.createElement('div'); line.className = 'beam-result-row'; const label = document.createElement('span'); label.textContent = `${rowName(index,row.type)} · ${row.sections.map(s => s.length ? `${s.length}` : '—').join(' + ')} mm`; const value = document.createElement('strong'); value.textContent = row.sections.every(s=>s.length) ? `${formatRange(row.minLength,row.maxLength)}*` : 'Brak doboru'; line.append(label,value); beamResults.append(line); });
+  const frame = document.createElement('div'); frame.className = 'beam-result-row'; frame.innerHTML = `<span>Rama · głębokość / wysokość</span><strong>${format(result.frameDepth)} / ${format(result.rackHeight)}</strong>`; beamResults.append(frame);
+  result.rows.filter(row => row.type === 'double').forEach((row,index) => { const gap = document.createElement('div'); gap.className = 'beam-result-row'; const label = document.createElement('span'); label.textContent = `Regał podwójny ${index + 1} · odstęp ładunków / ram`; const value = document.createElement('strong'); value.textContent = `${format(row.loadGap)} / ${format(row.frameGap)}`; gap.append(label,value); beamResults.append(gap); });
   const depth = document.createElement('div'); depth.className = 'beam-result-row'; depth.innerHTML = `<span>Głębokość układu z korytarzami</span><strong>${format(result.overallDepth)}</strong>`; beamResults.append(depth);
   const deckingNames = {none:'Brak wypełnienia',mesh:'Panel siatkowy',grate:'Krata',bars:'Poprzeczki',board:'Płyta wiórowa'};
   const protectionNames = {none:'brak osłon',barrier:'odbojnica',polymer:'odbojnica z tworzywa'};
@@ -229,13 +242,17 @@ function render() {
   $('#rear-legend').dataset.type = state.rearProtection;
   $('#rear-legend-label').textContent = rearNames[state.rearProtection];
   const notices = $('#notices'); notices.replaceChildren();
-  result.warnings.forEach((warning,index) => { const div = document.createElement('div'); div.className = `notice${index === 0 && !result.valid ? ' error' : ''}`; div.textContent = warning; notices.append(div); });
+  result.warnings.forEach((warning,index) => { const div = document.createElement('div'); div.className = `notice${(index === 0 && !result.valid) || warning.includes('obecnie wybrano brak wypełnienia') ? ' error' : ''}`; div.textContent = warning; notices.append(div); });
   if(state.protection === 'barrier') { const div = document.createElement('div'); div.className = 'notice'; div.textContent = 'Uwzględniono odbojnicę. Jej dokładny obrys i wymagane odstępy trzeba dobrać do ruchu wózka.'; notices.append(div); }
   if(state.protection === 'polymer') { const div = document.createElement('div'); div.className = 'notice'; div.textContent = 'Odbojnica z tworzywa jest tubą zakładaną na słup. Wymiary i sposób montażu należy dobrać do konkretnego produktu oraz ruchu wózka.'; notices.append(div); }
 }
 
 syncInputs();
 document.querySelectorAll('#pallet-width,#pallet-depth,#pallet-height,#levels,#truck,#decking,#protection,#rear-protection').forEach(input => input.addEventListener('input', updateFromInputs));
+$('#frame-depth').addEventListener('change', () => { state.frameDepth = number('#frame-depth', 100, 3000); render(); });
+$('#frame-depth-auto').addEventListener('click', () => { state.frameDepth = null; render(); });
+$('#frame-height').addEventListener('change', () => { const height = number('#frame-height', currentResult.requiredFrameHeight, 50000); state.frameHeight = Math.max(currentResult.requiredFrameHeight, Math.round(height / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP); render(); });
+$('#frame-height-auto').addEventListener('click', () => { state.frameHeight = null; render(); });
 document.querySelectorAll('[data-standard]').forEach(button => button.addEventListener('click', () => { state.standard = button.dataset.standard; render(); }));
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => { viewMode = button.dataset.view; renderDrawing(currentResult); }));
 $('#rotate-left').addEventListener('click', () => scene3d?.rotateBy(-Math.PI / 8));

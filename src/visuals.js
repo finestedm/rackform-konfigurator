@@ -46,7 +46,8 @@ function drawPlan(svg, config, result, selectedId, onSelect, onAddSection) {
     add(svg, 'rect', {x:x0,y,width:rackWidth,height:rowHeight,fill:rowValid?(selected?'#d8e6d9':'#e5ece5'):'#f8e9e4',stroke:rowValid?(selected?'#5b8b68':'#8fa89a'):'#bf806b','stroke-width':selected?2:1});
     if (row.type === 'double') {
       add(svg, 'line', {x1:x0+3,y1:y+rowHeight/2,x2:x0+rackWidth-3,y2:y+rowHeight/2,stroke:'#9bb5a0','stroke-width':1,'stroke-dasharray':'5 4'});
-      add(svg, 'text', {x:x0+rackWidth/2,y:y+rowHeight/2+4,'text-anchor':'middle',fill:'#668a70','font-size':12,'font-family':'DM Sans','font-weight':700}, 'REGAŁ PODWÓJNY · 2 STRONY');
+      add(svg, 'text', {x:x0+rackWidth/2,y:y+rowHeight/2-6,'text-anchor':'middle',fill:'#668a70','font-size':11,'font-family':'DM Sans','font-weight':700}, 'REGAŁ PODWÓJNY · 2 STRONY');
+      add(svg, 'text', {x:x0+rackWidth/2,y:y+rowHeight/2+14,'text-anchor':'middle',fill:'#668a70','font-size':10,'font-family':'DM Sans'}, `ładunki ${Math.round(row.loadGap)} / ramy ${Math.round(row.frameGap)} mm`);
     } else add(svg, 'text', {x:x0+rackWidth/2,y:y+rowHeight/2+4,'text-anchor':'middle',fill:'#668a70','font-size':12,'font-family':'DM Sans','font-weight':700}, 'REGAŁ POJEDYNCZY');
     let sectionX = x0;
     const postXs = [x0+3];

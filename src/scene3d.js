@@ -100,11 +100,11 @@ function create(container, onAddSection) {
   }
   function pallet(x, z, supportY, level, width, depth, alternate) {
     const palletHeight = 0.115;
-    box(x, supportY + 0.04, z, width * 0.94, 0.08, depth * 0.9, materials.wood, true);
+    box(x, supportY + 0.04, z, width * 0.94, 0.08, depth * 0.98, materials.wood, true);
     for (const offset of [-0.28, 0, 0.28]) box(x, supportY + 0.09, z + depth * offset, width * 0.94, 0.03, depth * 0.18, materials.woodLight);
     const cargoHeight = Math.max(0.1, M(level.loadHeight) - palletHeight);
-    box(x, supportY + palletHeight + cargoHeight / 2, z, width * 0.88, cargoHeight, depth * 0.82, alternate ? materials.loadAlt : materials.load, true);
-    box(x, supportY + palletHeight + cargoHeight / 2, z + depth * 0.412, width * 0.88, cargoHeight, 0.014, materials.loadEdge);
+    box(x, supportY + palletHeight + cargoHeight / 2, z, width * 0.88, cargoHeight, depth * 0.96, alternate ? materials.loadAlt : materials.load, true);
+    box(x, supportY + palletHeight + cargoHeight / 2, z + depth * 0.482, width * 0.88, cargoHeight, 0.014, materials.loadEdge);
   }
   function decking(type, x1, x2, z1, z2, y) {
     if (type === 'none') return;
@@ -194,8 +194,13 @@ function create(container, onAddSection) {
     result.layoutRows.forEach((row, rowIndex) => {
       const length = M(row.nominalLength);
       const start = M(row.start), end = M(row.end);
-      const laneDepth = M(config.palletDepth);
-      const lanes = row.type === 'double' ? [[start, start + laneDepth], [end - laneDepth, end]] : [[start, end]];
+      const laneDepth = M(result.frameDepth);
+      const loadDepth = M(config.palletDepth);
+      const outerOverhang = Math.max(0, (loadDepth - laneDepth) / 2);
+      const firstFront = start + outerOverhang;
+      const firstBack = firstFront + laneDepth;
+      const secondFront = firstBack + M(row.frameGap || 0);
+      const lanes = row.type === 'double' ? [[firstFront, firstBack], [secondFront, secondFront + laneDepth]] : [[firstFront, firstBack]];
       const xPosts = [0.05];
       const sections = [];
       let x = 0.1;
@@ -234,7 +239,7 @@ function create(container, onAddSection) {
             for (let position = 0; position < section.positions; position++) {
               const centerX = x1 + clearance + palletWidth * 0.5 + position * (palletWidth + clearance);
               if (centerX + palletWidth / 2 > x2 + 0.002) continue;
-              pallet(centerX, z, supportY, level, palletWidth, Math.min(laneDepth, back - front), (position + levelIndex + sectionIndex) % 2);
+              pallet(centerX, z, supportY, level, palletWidth, loadDepth, (position + levelIndex + sectionIndex) % 2);
             }
           });
         });
