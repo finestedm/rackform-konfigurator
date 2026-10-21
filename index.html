@@ -43,9 +43,14 @@
             <label class="field"><span>Poziomy składowania</span><div class="input-unit"><input id="levels" type="number" min="1" max="8" step="1" value="3"><b>poz.</b></div></label>
             <label class="field"><span>Rodzaj wózka</span><select id="truck"><option value="counterbalance">Czołowy</option><option value="reach" selected>Reach truck</option><option value="vna">Systemowy VNA</option></select></label>
           </div>
+          <div class="field-grid two frame-inputs">
+            <div class="dimension-control"><label class="field" for="frame-depth"><span>Głębokość ramy</span><div class="input-unit"><input id="frame-depth" type="number" min="100" max="3000" step="10" value="1100"><b>mm</b></div></label><button type="button" class="dimension-auto" id="frame-depth-auto" hidden>Przywróć −100 mm</button></div>
+            <div class="dimension-control"><label class="field" for="frame-height"><span>Wysokość ramy</span><div class="input-unit"><input id="frame-height" type="number" min="250" max="50000" step="250" value="5250"><b>mm</b></div></label><button type="button" class="dimension-auto" id="frame-height-auto" hidden>Dobierz automatycznie</button></div>
+          </div>
+          <p class="hint frame-hint" id="frame-note">Domyślnie rama jest o 100 mm płytsza od ładunku. Wysokość ramy dobieramy co 250 mm.</p>
           <div class="level-heading"><strong>Wysokości poziomów</strong><span>pierwsza paleta stoi na posadzce</span></div>
           <div id="level-list" class="level-list"></div>
-          <p class="hint level-hint">Poziom 1 jest na posadzce. Pierwsza belka znajduje się nad nim. Dla każdego poziomu przyjmujemy 200 mm luzu nad ładunkiem; zbyt małe światło zostanie zwiększone w obliczeniach.</p>
+          <p class="hint level-hint">Poziom 1 jest na posadzce, a pierwsza belka nad nim. Światło poziomu wynosi co najmniej wysokość ładunku + 100 mm. Belki można ustawiać co 50 mm.</p>
           <div class="section-list" id="rack-list"></div>
           <div class="add-actions"><button type="button" class="add-button" id="add-single"><span>＋</span> Dodaj regał pojedynczy</button><button type="button" class="add-button" id="add-double"><span>＋</span> Dodaj regał podwójny</button></div>
         </section>

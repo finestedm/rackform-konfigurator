@@ -11,6 +11,7 @@
 /* Keep the drawing's intrinsic width inside the preview card on narrow screens. */
 .workspace>*, .config-column>*, .result-card, .drawing-wrap, .view-switch, .metric{min-width:0}
 .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.frame-inputs{margin:-6px 0 0}.dimension-control{min-width:0}.dimension-auto{border:0;background:transparent;color:#3b7150;font-size:10px;font-weight:700;padding:6px 0 0;text-decoration:underline;text-underline-offset:2px}.frame-hint{margin:7px 0 23px}
 @media(max-width:620px){
   .drawing-wrap.plan,.drawing-wrap.front,.drawing-wrap.threeD{height:300px}
   .drawing-wrap.plan{width:100%;max-width:100%;touch-action:pan-x pan-y}
