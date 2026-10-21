@@ -43,9 +43,9 @@
             <label class="field"><span>Poziomy składowania</span><div class="input-unit"><input id="levels" type="number" min="1" max="8" step="1" value="3"><b>poz.</b></div></label>
             <label class="field"><span>Rodzaj wózka</span><select id="truck"><option value="counterbalance">Czołowy</option><option value="reach" selected>Reach truck</option><option value="vna">Systemowy VNA</option></select></label>
           </div>
-          <div class="level-heading"><strong>Wysokości poziomów</strong><span>światło między belkami i wysokość ładunku</span></div>
+          <div class="level-heading"><strong>Wysokości poziomów</strong><span>pierwsza paleta stoi na posadzce</span></div>
           <div id="level-list" class="level-list"></div>
-          <p class="hint level-hint">Dla każdego poziomu przyjmujemy 200 mm luzu nad ładunkiem. Jeśli zadane światło jest za małe, obliczenia podnoszą je do wymaganej wartości.</p>
+          <p class="hint level-hint">Poziom 1 jest na posadzce. Pierwsza belka znajduje się nad nim. Dla każdego poziomu przyjmujemy 200 mm luzu nad ładunkiem; zbyt małe światło zostanie zwiększone w obliczeniach.</p>
           <div class="section-list" id="rack-list"></div>
           <div class="add-actions"><button type="button" class="add-button" id="add-single"><span>＋</span> Dodaj regał pojedynczy</button><button type="button" class="add-button" id="add-double"><span>＋</span> Dodaj regał podwójny</button></div>
         </section>
@@ -53,8 +53,8 @@
         <section class="panel" aria-labelledby="equipment-title">
           <div class="panel-heading"><div><span class="step">03</span><h2 id="equipment-title">Wyposażenie</h2></div><p>Jednakowe dla całego układu</p></div>
           <div class="field-grid two">
-            <label class="field"><span>Wypełnienie poziomów</span><select id="decking"><option value="mesh">Panel siatkowy</option><option value="grate">Krata</option><option value="bars">Poprzeczki</option><option value="board">Płyta wiórowa</option></select></label>
-            <label class="field"><span>Ochrona słupów</span><select id="protection"><option value="none">Brak osłon</option><option value="barrier">Odbojnica</option><option value="polymer-asafe">Odbojnice z tworzywa · typ A-SAFE</option><option value="polymer-ampere">Odbojnice z tworzywa · typ Ampere</option></select></label>
+            <label class="field"><span>Wypełnienie poziomów</span><select id="decking"><option value="none">Brak wypełnienia</option><option value="mesh">Panel siatkowy</option><option value="grate">Krata</option><option value="bars">Poprzeczki</option><option value="board">Płyta wiórowa</option></select></label>
+            <label class="field"><span>Ochrona słupów</span><select id="protection"><option value="none">Brak osłon</option><option value="barrier">Odbojnica</option><option value="polymer">Odbojnica z tworzywa</option></select></label>
             <label class="field"><span>Zabezpieczenie tyłu regału</span><select id="rear-protection"><option value="none">Brak</option><option value="mesh">Wygrodzenie siatkowe pleców</option><option value="backstops">Backstopy</option></select></label>
           </div>
         </section>
@@ -69,8 +69,8 @@
             <button type="button" data-view="threeD" aria-pressed="false">Widok 3D</button>
           </div>
           <div class="drawing-toolbar"><span id="drawing-title">PLAN WSZYSTKICH REGAŁÓW</span><span id="drawing-scale">RYSUNEK POGLĄDOWY</span></div>
-          <div class="drawing-wrap" id="drawing-wrap"><svg id="rack-drawing" role="img" aria-label="Plan regałów"></svg></div>
-          <div class="view-controls" id="view-controls" hidden><span>Przeciągnij rysunek, aby obrócić</span><div><button type="button" id="rotate-left" aria-label="Obróć widok 3D w lewo">↶</button><button type="button" id="rotate-right" aria-label="Obróć widok 3D w prawo">↷</button><button type="button" id="rotate-reset">Reset widoku</button></div></div>
+          <div class="drawing-wrap" id="drawing-wrap"><svg id="rack-drawing" role="img" aria-label="Plan regałów"></svg><div id="scene3d" class="scene3d" aria-label="Interaktywny widok 3D regałów" hidden></div></div>
+          <div class="view-controls" id="view-controls" hidden><span>Przeciągnij: obrót · kółko: zbliżenie · prawy przycisk: przesunięcie</span><div><button type="button" id="rotate-left" aria-label="Obróć widok 3D w lewo">↶</button><button type="button" id="rotate-right" aria-label="Obróć widok 3D w prawo">↷</button><button type="button" id="rotate-reset">Reset widoku</button><button type="button" id="expand-3d">Powiększ</button></div></div>
           <div class="diagram-legend"><span><i class="legend-frame"></i> Słupy RAL 5010</span><span><i class="legend-beam"></i> Belki RAL 1007 · 150 mm</span><span><i class="legend-galva"></i> Diagonale galva</span><span id="post-guard-legend" hidden><i class="legend-post-guard"></i> Odbojnice RAL 1004</span><span><i class="legend-pallet"></i> Paleta / ładunek</span><span><i class="legend-aisle"></i> Korytarz pracy</span><span id="rear-legend" hidden><i class="legend-rear"></i><span id="rear-legend-label"></span></span></div>
           <div class="metric-grid">
             <div class="metric"><span>DŁUGOŚĆ ZABUDOWY*</span><strong id="total-length">—</strong><small>najdłuższy rząd; profile 85 / 100 / 120 mm</small></div>
@@ -89,6 +89,7 @@
   <footer><span>RACKFORM / KONFIGURATOR WSTĘPNY</span><span>PRECYZJA ZACZYNA SIĘ OD PLANU.</span></footer>
   <script defer src="./src/calculator.js"></script>
   <script defer src="./src/visuals.js"></script>
+  <script defer src="./src/scene3d.bundle.js"></script>
   <script defer src="./src/app.js"></script>
 </body>
 </html>
