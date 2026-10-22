@@ -244,7 +244,7 @@ function renderRackTable(result) {
       });
     sectionsBox.append(sectionList); body.append(sectionsBox);
     const actions = document.createElement('footer'); actions.className = 'rack-config-actions';
-    const levels = document.createElement('button'); levels.type = 'button'; levels.className = 'rack-action rack-levels-action'; levels.textContent = `Poziomy: ${row.levelsData.length}`; levels.title = 'Ustaw poziomy składowania'; levels.addEventListener('click', () => openLevelModal(rack.id));
+    const levels = document.createElement('button'); levels.type = 'button'; levels.className = 'rack-action rack-levels-action'; levels.innerHTML = `<span>Poziomy składowania</span><b>${row.levelsData.length}</b>`; levels.title = 'Ustaw poziomy składowania'; levels.setAttribute('aria-label', `Ustaw ${row.levelsData.length} poziomy składowania`); levels.addEventListener('click', () => openLevelModal(rack.id));
     const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.className = 'rack-action'; duplicate.textContent = 'Duplikuj'; duplicate.addEventListener('click', () => duplicateRack(rack.id));
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'rack-action rack-remove-action'; remove.textContent = 'Usuń'; remove.title = 'Usuń konfigurację'; remove.disabled = state.racks.length === 1; remove.addEventListener('click', () => { state.racks = state.racks.filter(item => item.id !== rack.id); selectedRack = state.racks[0].id; render(); });
     actions.append(levels, duplicate, remove); body.append(actions); card.append(body); grid.append(card);
