@@ -29,7 +29,7 @@ Każdy poziom ma edytowalne światło i wysokość ładunku. Światło przyjęte
 
 Plan umieszcza korytarz przed każdym rzędem, a także za ostatnim rzędem, jeśli jest podwójny. Pokazywana głębokość układu obejmuje te korytarze. Plan i widok 3D są poglądowe; korytarze oraz model wymagają doprecyzowania dla konkretnej hali i wózka.
 
-Globalne pole zabezpieczenia tyłu i wypełnienia poziomów ustawia wartości początkowe dla wszystkich elementów. Następnie można zmienić wypełnienie osobno przy każdym poziomie oraz wygrodzenie lub backstopy osobno przy każdym regale. Na pojedynczym rzędzie zabezpieczenie tyłu umieszczamy przy tylnej krawędzi, a na podwójnym po obu stronach środkowego odstępu. Plan i widok 3D pokazują wygrodzenie jako szarą siatkę, a backstopy jako poziome ograniczniki przy poziomach składowania. Ich gabaryt i mocowanie wymagają osobnego doboru.
+Globalne pole zabezpieczenia tyłu i wypełnienia poziomów ustawia wartości początkowe dla wszystkich elementów. Następnie można zmienić wypełnienie osobno przy każdym poziomie oraz wygrodzenie lub backstopy osobno przy każdym regale. Na pojedynczym rzędzie zabezpieczenie tyłu umieszczamy przy tylnej krawędzi, a na podwójnym po obu stronach środkowego odstępu. Jeśli ładunek jest głębszy od ramy, zabezpieczenie jest odsuwane o połowę różnicy głębokości, aby nie kolidowało z ładunkiem; wymiar odsunięcia jest pokazany w podsumowaniu. Plan i widok 3D pokazują wygrodzenie jako szarą siatkę, a backstopy jako poziome ograniczniki przy poziomach składowania. Ich gabaryt i mocowanie wymagają osobnego doboru.
 
 Odbojnica z tworzywa jest tubą zakładaną na słup od strony korytarza. Model 3D pokazuje jej ogólną formę bez odwzorowania konkretnego produktu lub jego parametrów.
 
