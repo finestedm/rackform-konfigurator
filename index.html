@@ -52,7 +52,11 @@
           <div id="level-list" class="level-list"></div>
           <p class="hint level-hint">Poziom 1 jest na posadzce, a pierwsza belka nad nim. Światło poziomu wynosi co najmniej wysokość ładunku + 100 mm. Belki można ustawiać co 50 mm.</p>
           <div class="section-list" id="rack-list"></div>
-          <div class="add-actions"><button type="button" class="add-button" id="add-single"><span>＋</span> Dodaj regał pojedynczy</button><button type="button" class="add-button" id="add-double"><span>＋</span> Dodaj regał podwójny</button></div>
+          <div class="add-actions">
+            <div class="add-rack-control"><label class="field quantity-field"><span>Ilość</span><div class="input-unit"><input id="single-quantity" type="number" min="1" max="50" step="1" value="1" aria-label="Ilość regałów pojedynczych"><b>szt.</b></div></label><button type="button" class="add-button" id="add-single"><span>＋</span> Dodaj regał pojedynczy</button></div>
+            <div class="add-rack-control"><label class="field quantity-field"><span>Ilość</span><div class="input-unit"><input id="double-quantity" type="number" min="1" max="50" step="1" value="1" aria-label="Ilość regałów podwójnych"><b>szt.</b></div></label><button type="button" class="add-button" id="add-double"><span>＋</span> Dodaj regał podwójny</button></div>
+          </div>
+          <p class="hint">Jedna konfiguracja może reprezentować do 50 identycznych regałów. Skopiuj konfigurację, jeśli kolejny rząd ma mieć inne sekcje.</p>
         </section>
 
         <section class="panel" aria-labelledby="equipment-title">
@@ -93,7 +97,7 @@
   </main>
   <footer><span>RACKFORM / KONFIGURATOR WSTĘPNY</span><span>PRECYZJA ZACZYNA SIĘ OD PLANU.</span></footer>
   <script defer src="./src/calculator.js?v=20261021-2"></script>
-  <script defer src="./src/visuals.js?v=20261021-2"></script>
+  <script defer src="./src/visuals.js?v=20261021-3"></script>
   <script defer src="./src/scene3d.bundle.js?v=20261021-2"></script>
   <script defer src="./src/app.js?v=20261021-2"></script>
 </body>
