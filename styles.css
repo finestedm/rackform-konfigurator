@@ -37,6 +37,7 @@
 .rack-table td:nth-child(2) select{min-width:105px}.rack-section-inline{grid-template-columns:92px 58px minmax(105px,1fr) 24px}.rack-section-inline input{height:30px;border:1px solid #dbe2df;background:#fff;color:#1e3237;font:700 11px 'Space Grotesk';padding:0 7px}.section-group-delete{font-size:17px;padding:2px;color:#8a5d53}.section-group-delete:not(:disabled):hover{color:#9b3f2e;background:#f8ebe7}
 
 #print-sheets{display:none}
+.rack-config-actions{align-items:stretch;padding:7px;background:#f3f7f4;border:1px solid #dce6df}.rack-config-actions .rack-action{background:#fff;border-color:#ccd9d0;color:#49675a}.rack-config-actions .rack-levels-action{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:180px;margin-right:auto;padding:7px 10px;color:#254e3c;border-color:#aac4b0;background:#fff}.rack-levels-action span{font-size:10px}.rack-levels-action b{display:grid;place-items:center;width:22px;height:22px;background:#e1eee4;color:#3e6a4a;font:700 11px 'Space Grotesk'}.rack-config-actions .rack-action:hover{background:#eaf3ec;border-color:#95b29d}.rack-config-actions .rack-remove-action:hover{background:#fff1ee!important}
 .workspace{max-width:1800px}
 #rack-list{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;padding-bottom:3px}
 .rack-table{width:100%;min-width:650px;table-layout:fixed}
@@ -66,3 +67,4 @@
   .print-spec{margin:0}.print-spec dt{font:700 7.5pt 'DM Sans';color:#789088;letter-spacing:.04em}.print-spec dd{margin:1mm 0 0;font:600 8.5pt 'Space Grotesk';line-height:1.32}
   .print-level-table{width:100%;border-collapse:collapse;font-size:7.5pt}.print-level-table th,.print-level-table td{text-align:left;border-bottom:1px solid #dfe7e2;padding:1.7mm 1mm}.print-level-table th{color:#6f847b;font-weight:700}
 }
+@media(max-width:720px){.rack-config-actions .rack-levels-action{min-width:0;margin-right:0}}
