@@ -113,6 +113,16 @@ test('ilość identycznych regałów rozwija się w planie bez powielania konfig
   assert.equal(result.layoutRows.length, 3);
 });
 
+test('grupowe długości trawersów zachowują liczbę sekcji', () => {
+  const result = calculate({
+    palletWidth: 800, palletDepth: 1200, palletHeight: 1400, levels: 2,
+    standard: 'standard', truck: 'reach',
+    racks: [{ id: 8, type: 'single', sections: [2, 2, 2, 2, 2, 3, 3, 3], sectionLengths: [1900, 1900, 1900, 1900, 1900, 2700, 2700, 2700] }]
+  });
+  assert.deepEqual(result.rows[0].sections.map(section => section.length), [1900, 1900, 1900, 1900, 1900, 2700, 2700, 2700]);
+  assert.equal(result.rows[0].sections.length, 8);
+});
+
 test('wypełnienie poziomów i zabezpieczenie tyłu są niezależne dla konfiguracji regałów', () => {
   const result = calculate({
     palletWidth: 800,
