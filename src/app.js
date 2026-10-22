@@ -195,7 +195,9 @@ function renderRackTable(result) {
         const apply = () => { groups[groupSectionIndex].length = Number(length.value); groups[groupSectionIndex].count = numberValue(count.value, 1, 50); applySectionGroups(rack, groups); selectedRack = rack.id; render(); };
         length.addEventListener('change', apply); count.addEventListener('change', apply);
         const info = document.createElement('small'); info.textContent = `${group.count} × ${group.length} mm`;
-        wrap.append(length, count, info); sectionsCell.append(wrap);
+        const removeGroup = document.createElement('button'); removeGroup.type = 'button'; removeGroup.className = 'icon-button section-group-delete'; removeGroup.textContent = '×'; removeGroup.title = 'Usuń grupę sekcji'; removeGroup.setAttribute('aria-label', `Usuń grupę ${group.length} mm z konfiguracji ${groupIndex + 1}`); removeGroup.disabled = groups.length === 1;
+        removeGroup.addEventListener('click', () => { groups.splice(groupSectionIndex, 1); applySectionGroups(rack, groups); selectedRack = rack.id; render(); });
+        wrap.append(length, count, info, removeGroup); sectionsCell.append(wrap);
       });
       const add = document.createElement('button'); add.type = 'button'; add.className = 'small-add'; add.textContent = '＋ Grupa sekcji'; add.addEventListener('click', () => { groups.push({ length: beamCatalog().find(value => positionsForBeamLength(value) > 0) ?? beamCatalog()[0], count: 1 }); applySectionGroups(rack, groups); selectedRack = rack.id; render(); }); sectionsCell.append(add);
     } else { sectionsCell.textContent = groups.map(group => `${group.length} mm: ${group.count} sekcji`).join(' · '); }
@@ -236,9 +238,9 @@ function applySectionGroups(rack, groups) {
 
 function svgEl(name, attrs = {}) { const el = document.createElementNS('http://www.w3.org/2000/svg', name); for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, String(v)); return el; }
 function addSvg(svg, name, attrs, text) { const el = svgEl(name, attrs); if (text != null) el.textContent = text; svg.append(el); return el; }
-function drawFront(result) {
-  const row = result.rows.find(r => r.sourceId === selectedRack || r.id === selectedRack) ?? result.rows[0];
-  const svg = $('#rack-drawing'); svg.replaceChildren();
+function drawFront(result, rowOverride, svgOverride) {
+  const row = rowOverride ?? result.rows.find(r => r.sourceId === selectedRack || r.id === selectedRack) ?? result.rows[0];
+  const svg = svgOverride ?? $('#rack-drawing'); svg.replaceChildren();
   svg.setAttribute('viewBox', '0 0 760 260');
   const sections = row.sections;
   const baseX = 40, baseY = 208, totalWidth = 680;
@@ -288,11 +290,71 @@ function drawFront(result) {
   drawPost(x);
   if (state.protection === 'barrier') addSvg(svg,'line',{x1:baseX,y1:baseY-7,x2:x+post,y2:baseY-7,stroke:COLORS.guard,'stroke-width':5,class:'barrier-front'});
   addSvg(svg,'line',{x1:baseX-12,y1:baseY+1,x2:x+post+12,y2:baseY+1,stroke:'#698077','stroke-width':2});
-  addSvg(svg,'text',{x:baseX,y:24,fill:'#3d575c','font-size':10,'font-family':'DM Sans','font-weight':700},`RZĄD ${result.rows.findIndex(r=>r.id===row.id)+1} / ${row.type==='double'?'REGAŁ PODWÓJNY':'REGAŁ POJEDYNCZY'}`);
+  addSvg(svg,'text',{x:baseX,y:24,fill:'#3d575c','font-size':10,'font-family':'DM Sans','font-weight':700},`RZĄD ${result.rows.findIndex(r=>(r.sourceId ?? r.id)===(row.sourceId ?? row.id))+1} / ${row.type==='double'?'REGAŁ PODWÓJNY':'REGAŁ POJEDYNCZY'}`);
   addSvg(svg,'text',{x:720,y:24,'text-anchor':'end',fill:'#83938f','font-size':9,'font-family':'DM Sans'},`${state.levels} ${countWord(state.levels,'POZIOM','POZIOMY','POZIOMÓW')} · ${row.sections.length} ${countWord(row.sections.length,'SEKCJA','SEKCJE','SEKCJI')}`);
   addSvg(svg,'text',{x:baseX,y:42,fill:'#7d918e','font-size':9,'font-family':'DM Sans'},'SŁUPY: 85 / 100 / 120 mm');
   if(row.type==='double') addSvg(svg,'text',{x:720,y:42,'text-anchor':'end',fill:'#7d918e','font-size':9,'font-family':'DM Sans'},'DRUGA STRONA ZA WIDOKIEM');
-  svg.setAttribute('aria-label',`Rysunek rzędu ${result.rows.findIndex(r=>r.id===row.id)+1}: ${row.sections.length} ${countWord(row.sections.length,'sekcja','sekcje','sekcji')}, ${state.levels} ${countWord(state.levels,'poziom','poziomy','poziomów')}, wysokość ${result.rackHeight} mm, słupy 85, 100 lub 120 mm`);
+  svg.setAttribute('aria-label',`Rysunek rzędu ${result.rows.findIndex(r=>(r.sourceId ?? r.id)===(row.sourceId ?? row.id))+1}: ${row.sections.length} ${countWord(row.sections.length,'sekcja','sekcje','sekcji')}, ${state.levels} ${countWord(state.levels,'poziom','poziomy','poziomów')}, wysokość ${result.rackHeight} mm, słupy 85, 100 lub 120 mm`);
+}
+
+function printText(label, value) {
+  const item = document.createElement('div'); item.className = 'print-spec';
+  const name = document.createElement('dt'); name.textContent = label;
+  const detail = document.createElement('dd'); detail.textContent = value;
+  item.append(name, detail);
+  return item;
+}
+
+function renderPrintSheets(result) {
+  const container = $('#print-sheets');
+  if (!container) return;
+  container.replaceChildren();
+  const deckingNames = {none:'Brak wypełnienia',mesh:'Panel siatkowy',grate:'Krata',bars:'Poprzeczki',board:'Płyta wiórowa'};
+  const rearNames = {none:'Brak',mesh:'Wygrodzenie siatkowe pleców',backstops:'Backstopy'};
+  const protectionNames = {none:'Brak osłon',barrier:'Odbojnica',polymer:'Odbojnica z tworzywa'};
+  result.rows.forEach((row, rowIndex) => {
+    const copies = Math.max(1, Number(row.quantity) || 1);
+    for (let copyIndex = 0; copyIndex < copies; copyIndex += 1) {
+      const sheet = document.createElement('article'); sheet.className = 'print-rack-sheet';
+      const heading = document.createElement('header'); heading.className = 'print-rack-heading';
+      const title = document.createElement('div');
+      const eyebrow = document.createElement('p'); eyebrow.textContent = 'RACKFORM · KARTA KONFIGURACJI';
+      const sourceIndex = Math.max(0, state.racks.findIndex(rack => rack.id === row.sourceId)) + 1;
+      const itemIndex = (row.copyIndex ?? copyIndex) + 1;
+      const h1 = document.createElement('h1'); h1.textContent = `Regał ${String(sourceIndex).padStart(2, '0')}.${String(itemIndex).padStart(2, '0')} · widok od frontu`;
+      title.append(eyebrow, h1);
+      const type = document.createElement('strong'); type.textContent = row.type === 'double' ? 'REGAŁ PODWÓJNY' : 'REGAŁ POJEDYNCZY';
+      heading.append(title, type);
+      const body = document.createElement('div'); body.className = 'print-rack-body';
+      const drawing = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); drawing.classList.add('print-front-drawing');
+      drawFront(result, row, drawing);
+      const description = document.createElement('section'); description.className = 'print-rack-description';
+      const descriptionTitle = document.createElement('h2'); descriptionTitle.textContent = 'Opis konfiguracji'; description.append(descriptionTitle);
+      const specs = document.createElement('dl'); specs.className = 'print-specs';
+      specs.append(
+        printText('Paleta / ładunek', `${format(state.palletWidth)} × ${format(state.palletDepth)} × ${format(state.palletHeight)}`),
+        printText('Wysokość regału', format(result.rackHeight)),
+        printText('Rama', `${format(result.frameDepth)} głębokości · ${format(result.frameExtension)} ponad ostatnim poziomem`),
+        printText('Słupy / belki', '85 / 100 / 120 mm · belka 150 mm'),
+        printText('Sekcje', row.sections.map(section => `${format(section.length ?? section.needed)} / ${section.positions} pal.`).join(' · ')),
+        printText('Wypełnienie', [...new Set(result.levelsData.filter(level => !level.isFloor).map(level => deckingNames[level.decking] ?? deckingNames.none))].join(' / ') || 'Brak'),
+        printText('Zabezpieczenia', `${protectionNames[state.protection]} · tył: ${rearNames[row.rearProtection] ?? rearNames.none}`)
+      );
+      if (row.type === 'double') specs.append(printText('Odstęp między rzędami', `${format(row.loadGap)} między ładunkami · ${format(row.frameGap)} między ramami`));
+      description.append(specs);
+      const levelsTitle = document.createElement('h2'); levelsTitle.textContent = 'Poziomy składowania'; description.append(levelsTitle);
+      const levelTable = document.createElement('table'); levelTable.className = 'print-level-table';
+      levelTable.innerHTML = '<thead><tr><th>Poziom</th><th>Ładunek</th><th>Światło</th><th>Belka</th><th>Wypełnienie</th></tr></thead>';
+      const levelBody = document.createElement('tbody');
+      result.levelsData.forEach((level, levelIndex) => {
+        const tr = document.createElement('tr');
+        [String(levelIndex), format(level.loadHeight), format(level.effectiveClear), level.isFloor ? 'Posadzka' : format(level.beamElevation), level.isFloor ? 'Posadzka' : deckingNames[level.decking] ?? deckingNames.none].forEach(value => { const cell = document.createElement('td'); cell.textContent = value; tr.append(cell); });
+        levelBody.append(tr);
+      });
+      levelTable.append(levelBody); description.append(levelTable);
+      body.append(drawing, description); sheet.append(heading, body); container.append(sheet);
+    }
+  });
 }
 
 function renderPalletPreview() {
@@ -370,7 +432,7 @@ function render() {
   renderPalletPreview();
   document.querySelectorAll('[data-standard]').forEach(button => button.classList.toggle('active', button.dataset.standard === state.standard));
   $('#clearance-note').textContent = `Założony minimalny luz boczny i między paletami: ${CLEARANCE[state.standard]} mm. Dobór z długości ${state.standard === 'standard' ? '1000 / 1900 / 2700 / 3600' : '1000 / 1900 / 2850 / 3800'} mm.`;
-  renderLevelCards(result); renderRackTable(result); renderDrawing(result);
+  renderLevelCards(result); renderRackTable(result); renderDrawing(result); renderPrintSheets(result);
   $('#total-length').textContent = result.valid ? formatRange(result.longestMin, result.longestMax) : 'Brak doboru';
   $('#aisle').textContent = format(result.aisle);
   $('#aisle-note').textContent = `${TRUCKS[state.truck].label}, orientacyjnie`;
