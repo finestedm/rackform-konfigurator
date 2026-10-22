@@ -11,7 +11,7 @@ let scene3d = null;
 let currentResult;
 
 function defaultState() {
-  return { schemaVersion: 2, palletWidth: 800, palletDepth: 1200, palletHeight: 1400, frameDepth: null, frameHeight: null, levels: 3, levelDetails: Array.from({length:3}, () => ({clearHeight:1500,loadHeight:1400})), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', sections: [3, 2] }] };
+  return { schemaVersion: 3, palletWidth: 800, palletDepth: 1200, palletHeight: 1400, frameDepth: null, frameHeight: null, levels: 3, levelDetails: Array.from({length:3}, () => ({clearHeight:1500,loadHeight:1400})), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', quantity: 1, sections: [3, 2] }] };
 }
 function loadState() {
   try {
@@ -19,7 +19,8 @@ function loadState() {
     if (saved && Array.isArray(saved.racks) && saved.racks.length && saved.racks.every(r => Array.isArray(r.sections) && r.sections.length)) {
       saved.levelDetails = Array.from({length:saved.levels}, (_, index) => saved.levelDetails?.[index] ?? {clearHeight:saved.palletHeight+VERTICAL_CLEARANCE,loadHeight:saved.palletHeight});
       if (!saved.schemaVersion) saved.levelDetails.forEach(detail => { if (detail.clearHeight === detail.loadHeight + 200) detail.clearHeight = detail.loadHeight + VERTICAL_CLEARANCE; });
-      saved.schemaVersion = 2;
+      saved.racks = saved.racks.map(rack => ({ ...rack, quantity: Math.max(1, Math.min(50, Math.round(Number(rack.quantity) || 1))) }));
+      saved.schemaVersion = 3;
       saved.frameDepth = saved.frameDepth == null || !Number.isFinite(Number(saved.frameDepth)) ? null : Number(saved.frameDepth);
       saved.frameHeight = saved.frameHeight == null || !Number.isFinite(Number(saved.frameHeight)) ? null : Number(saved.frameHeight);
       if (['polymer-asafe','polymer-ampere'].includes(saved.protection)) saved.protection = 'polymer';
@@ -65,6 +66,7 @@ function updateFromInputs() {
   render();
 }
 function rowName(index, type) { return `Regał ${String(index + 1).padStart(2, '0')} · ${type === 'double' ? 'podwójny' : 'pojedynczy'}`; }
+function rackGroupName(index, type) { return `Konfiguracja ${String(index + 1).padStart(2, '0')} · ${type === 'double' ? 'podwójna' : 'pojedyncza'}`; }
 function countWord(count, one, few, many) { return count === 1 ? one : count < 5 ? few : many; }
 
 function renderLevelCards(result) {
@@ -89,43 +91,77 @@ function renderLevelCards(result) {
 
 function addSection(id) { const rack = state.racks.find(row => row.id === id); if (!rack) return; rack.sections.push(2); selectedRack = id; render(); }
 
+function nextRackId() { return Math.max(0, ...state.racks.map(rack => Number(rack.id) || 0)) + 1; }
+function duplicateRack(id) {
+  const source = state.racks.find(rack => rack.id === id);
+  if (!source) return;
+  const copy = { ...source, id: nextRackId(), quantity: 1, sections: [...source.sections] };
+  state.racks.push(copy);
+  selectedRack = copy.id;
+  render();
+}
+function moveRack(id, direction) {
+  const index = state.racks.findIndex(rack => rack.id === id);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= state.racks.length) return;
+  [state.racks[index], state.racks[target]] = [state.racks[target], state.racks[index]];
+  selectedRack = id;
+  render();
+}
+
 function renderRackCards(result) {
   const list = $('#rack-list');
   list.replaceChildren();
-  result.rows.forEach((row, index) => {
+  state.racks.forEach((rack, groupIndex) => {
+    const row = result.rows.find(candidate => candidate.sourceId === rack.id || candidate.id === rack.id);
+    if (!row) return;
     const card = document.createElement('div');
-    card.className = `rack-card${selectedRack === row.id ? ' selected' : ''}`;
+    const active = selectedRack === rack.id;
+    card.className = `rack-card${active ? ' selected' : ' collapsed'}`;
     const head = document.createElement('div'); head.className = 'rack-card-head';
-    const title = document.createElement('button'); title.type = 'button'; title.className = 'rack-name rack-select'; title.innerHTML = `<span class="rack-icon">▥</span><span>${rowName(index, row.type)}</span>`; title.setAttribute('aria-label', `Pokaż rysunek: ${rowName(index, row.type)}`); title.addEventListener('click', () => { selectedRack = row.id; viewMode = 'front'; render(); });
+    const title = document.createElement('button'); title.type = 'button'; title.className = 'rack-name rack-select'; title.innerHTML = `<span class="rack-icon">▥</span><span>${rackGroupName(groupIndex, row.type)} <small>×${rack.quantity}</small></span>`; title.setAttribute('aria-expanded', String(active)); title.setAttribute('aria-label', `Pokaż konfigurację: ${rackGroupName(groupIndex, row.type)}`); title.addEventListener('click', () => { selectedRack = rack.id; viewMode = 'front'; render(); });
     const right = document.createElement('div'); right.className = 'rack-head-actions';
     const type = document.createElement('span'); type.className = 'rack-type'; type.textContent = row.type === 'double' ? '2 STRONY' : '1 STRONA';
-    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.textContent = '×'; remove.title = 'Usuń regał'; remove.disabled = state.racks.length === 1; remove.addEventListener('click', () => { state.racks = state.racks.filter(r => r.id !== row.id); if (selectedRack === row.id) selectedRack = state.racks[0].id; render(); });
-    right.append(type, remove); head.append(title, right); card.append(head);
+    const tools = document.createElement('div'); tools.className = 'rack-card-tools';
+    const up = document.createElement('button'); up.type = 'button'; up.className = 'icon-button'; up.textContent = '↑'; up.title = 'Przenieś konfigurację wyżej'; up.disabled = groupIndex === 0; up.addEventListener('click', () => moveRack(rack.id, -1));
+    const down = document.createElement('button'); down.type = 'button'; down.className = 'icon-button'; down.textContent = '↓'; down.title = 'Przenieś konfigurację niżej'; down.disabled = groupIndex === state.racks.length - 1; down.addEventListener('click', () => moveRack(rack.id, 1));
+    const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.className = 'rack-action'; duplicate.textContent = 'Duplikuj'; duplicate.title = 'Duplikuj konfigurację'; duplicate.addEventListener('click', () => duplicateRack(rack.id));
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.textContent = '×'; remove.title = 'Usuń regał'; remove.disabled = state.racks.length === 1; remove.addEventListener('click', () => { state.racks = state.racks.filter(r => r.id !== rack.id); if (selectedRack === rack.id) selectedRack = state.racks[0].id; render(); });
+    tools.append(up, down, duplicate, remove); right.append(type, tools); head.append(title, right); card.append(head);
+    const body = document.createElement('div'); body.className = 'rack-card-body';
+    const quantityField = document.createElement('label'); quantityField.className = 'field rack-quantity-field';
+    const quantityCaption = document.createElement('span'); quantityCaption.textContent = 'Ilość identycznych regałów';
+    const quantityUnit = document.createElement('div'); quantityUnit.className = 'input-unit';
+    const quantityInput = document.createElement('input'); quantityInput.type = 'number'; quantityInput.min = '1'; quantityInput.max = '50'; quantityInput.step = '1'; quantityInput.value = rack.quantity; quantityInput.setAttribute('aria-label', `Ilość identycznych regałów w ${rackGroupName(groupIndex, row.type)}`);
+    quantityInput.addEventListener('change', () => { rack.quantity = numberValue(quantityInput.value, 1, 50); selectedRack = rack.id; render(); });
+    const quantitySuffix = document.createElement('b'); quantitySuffix.textContent = 'szt.'; quantityUnit.append(quantityInput, quantitySuffix); quantityField.append(quantityCaption, quantityUnit); body.append(quantityField);
     const sections = document.createElement('div'); sections.className = 'rack-sections';
-    row.sections.forEach((section, sectionIndex) => {
+    rack.sections.forEach((positions, sectionIndex) => {
+      const section = row.sections[sectionIndex];
       const sectionRow = document.createElement('div'); sectionRow.className = 'section-row';
       const number = document.createElement('span'); number.className = 'section-number'; number.textContent = String(sectionIndex + 1).padStart(2, '0');
-      const select = document.createElement('select'); select.setAttribute('aria-label', `Liczba palet w sekcji ${sectionIndex + 1}, regał ${index + 1}`);
+      const select = document.createElement('select'); select.setAttribute('aria-label', `Liczba palet w sekcji ${sectionIndex + 1}, ${rackGroupName(groupIndex, row.type)}`);
       for (let count = 1; count <= 4; count++) { const option = document.createElement('option'); option.value = count; option.textContent = `${count} ${count === 1 ? 'paleta' : count < 5 ? 'palety' : 'palet'}`; select.append(option); }
-      select.value = section.positions;
-      select.addEventListener('change', () => { state.racks[index].sections[sectionIndex] = Number(select.value); selectedRack = row.id; render(); });
+      select.value = positions;
+      select.addEventListener('change', () => { rack.sections[sectionIndex] = Number(select.value); selectedRack = rack.id; render(); });
       const beam = document.createElement('span'); beam.className = `section-beam${section.length ? '' : ' invalid'}`;
       if (section.length) { const length = document.createElement('b'); length.textContent = format(section.length); const clearance = document.createElement('small'); clearance.textContent = `luz ${Math.round(section.clearance * 10) / 10} mm`; beam.append(length, clearance); }
       else beam.textContent = 'Brak trawersu';
-      const removeSection = document.createElement('button'); removeSection.type = 'button'; removeSection.className = 'icon-button section-delete'; removeSection.textContent = '×'; removeSection.title = 'Usuń sekcję'; removeSection.disabled = row.sections.length === 1; removeSection.addEventListener('click', () => { state.racks[index].sections.splice(sectionIndex, 1); selectedRack = row.id; render(); });
+      const removeSection = document.createElement('button'); removeSection.type = 'button'; removeSection.className = 'icon-button section-delete'; removeSection.textContent = '×'; removeSection.title = 'Usuń sekcję'; removeSection.disabled = rack.sections.length === 1; removeSection.addEventListener('click', () => { rack.sections.splice(sectionIndex, 1); selectedRack = rack.id; render(); });
       sectionRow.append(number, select, beam, removeSection); sections.append(sectionRow);
     });
-    card.append(sections);
     const foot = document.createElement('div'); foot.className = 'rack-card-foot';
-    const add = document.createElement('button'); add.type = 'button'; add.className = 'small-add'; add.textContent = '＋ Dodaj sekcję'; add.addEventListener('click', () => addSection(row.id));
-    foot.append(add); card.append(foot); list.append(card);
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'small-add'; add.textContent = '＋ Dodaj sekcję'; add.addEventListener('click', () => addSection(rack.id));
+    foot.append(add); body.append(sections, foot); card.append(body); list.append(card);
   });
 }
+
+function numberValue(value, min, max) { const parsed = Number(value); return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : min; }
 
 function svgEl(name, attrs = {}) { const el = document.createElementNS('http://www.w3.org/2000/svg', name); for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, String(v)); return el; }
 function addSvg(svg, name, attrs, text) { const el = svgEl(name, attrs); if (text != null) el.textContent = text; svg.append(el); return el; }
 function drawFront(result) {
-  const row = result.rows.find(r => r.id === selectedRack) ?? result.rows[0];
+  const row = result.rows.find(r => r.sourceId === selectedRack || r.id === selectedRack) ?? result.rows[0];
   const svg = $('#rack-drawing'); svg.replaceChildren();
   svg.setAttribute('viewBox', '0 0 760 260');
   const sections = row.sections;
@@ -260,9 +296,9 @@ $('#rotate-right').addEventListener('click', () => scene3d?.rotateBy(Math.PI / 8
 $('#rotate-reset').addEventListener('click', () => scene3d?.reset());
 $('#expand-3d').addEventListener('click', () => { const expanded = $('#drawing-wrap').classList.toggle('expanded'); $('#expand-3d').textContent = expanded ? 'Zamknij' : 'Powiększ'; scene3d?.resize(); });
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && $('#drawing-wrap').classList.contains('expanded')) { $('#drawing-wrap').classList.remove('expanded'); $('#expand-3d').textContent = 'Powiększ'; scene3d?.resize(); } });
-$('#add-single').addEventListener('click', () => addRack('single'));
-$('#add-double').addEventListener('click', () => addRack('double'));
-function addRack(type) { const id = Math.max(...state.racks.map(r=>r.id))+1; state.racks.push({id,type,sections:[2]}); selectedRack = id; render(); }
+$('#add-single').addEventListener('click', () => addRack('single', numberValue($('#single-quantity').value, 1, 50)));
+$('#add-double').addEventListener('click', () => addRack('double', numberValue($('#double-quantity').value, 1, 50)));
+function addRack(type, quantity = 1) { const id = nextRackId(); state.racks.push({id,type,quantity:numberValue(quantity, 1, 50),sections:[2]}); selectedRack = id; render(); }
 $('#reset-button').addEventListener('click', () => { Object.assign(state, defaultState()); selectedRack = state.racks[0].id; viewMode = 'plan'; syncInputs(); render(); });
 $('#print-button').addEventListener('click', () => window.print());
 render();

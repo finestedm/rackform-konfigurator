@@ -41,13 +41,12 @@ function drawPlan(svg, config, result, selectedId, onSelect, onAddSection) {
     drawAisle(result.aisles[index], index);
     const rackWidth = row.nominalLength / maxLength * width;
     const rowHeight = rowHeights[index];
-    const selected = row.id === selectedId;
+    const rowId = row.sourceId ?? row.id;
+    const selected = rowId === selectedId;
     const rowValid = row.sections.every(section => section.length);
     add(svg, 'rect', {x:x0,y,width:rackWidth,height:rowHeight,fill:rowValid?(selected?'#d8e6d9':'#e5ece5'):'#f8e9e4',stroke:rowValid?(selected?'#5b8b68':'#8fa89a'):'#bf806b','stroke-width':selected?2:1});
     if (row.type === 'double') {
       add(svg, 'line', {x1:x0+3,y1:y+rowHeight/2,x2:x0+rackWidth-3,y2:y+rowHeight/2,stroke:'#9bb5a0','stroke-width':1,'stroke-dasharray':'5 4'});
-      add(svg, 'text', {x:x0+rackWidth/2,y:y+rowHeight/2-6,'text-anchor':'middle',fill:'#668a70','font-size':11,'font-family':'DM Sans','font-weight':700}, 'REGAŁ PODWÓJNY · 2 STRONY');
-      add(svg, 'text', {x:x0+rackWidth/2,y:y+rowHeight/2+14,'text-anchor':'middle',fill:'#668a70','font-size':10,'font-family':'DM Sans'}, `ładunki ${Math.round(row.loadGap)} / ramy ${Math.round(row.frameGap)} mm`);
     } else add(svg, 'text', {x:x0+rackWidth/2,y:y+rowHeight/2+4,'text-anchor':'middle',fill:'#668a70','font-size':12,'font-family':'DM Sans','font-weight':700}, 'REGAŁ POJEDYNCZY');
     let sectionX = x0;
     const postXs = [x0+3];
@@ -76,11 +75,17 @@ function drawPlan(svg, config, result, selectedId, onSelect, onAddSection) {
       const guardYs = row.type === 'double' ? [y+7,y+rowHeight-7] : [y+7];
       postXs.forEach(postX => guardYs.forEach(guardY => add(svg, 'circle', {cx:postX,cy:guardY,r:5.5,fill:COLORS.guardLight,'fill-opacity':.92,stroke:COLORS.guard,'stroke-width':1.5,class:'post-guard-plan'})));
     }
+    if (row.type === 'double') {
+      const labelWidth = Math.min(220, rackWidth - 12);
+      add(svg, 'rect', {x:x0+(rackWidth-labelWidth)/2,y:y+20,width:labelWidth,height:34,rx:2,fill:selected?'#d8e6d9':'#e5ece5','fill-opacity':.96});
+      add(svg, 'text', {x:x0+rackWidth/2,y:y+34,'text-anchor':'middle',fill:'#4f7860','font-size':11,'font-family':'DM Sans','font-weight':700}, 'PODWÓJNY · 2 STRONY');
+      add(svg, 'text', {x:x0+rackWidth/2,y:y+48,'text-anchor':'middle',fill:'#4f7860','font-size':10,'font-family':'DM Sans','font-weight':700}, `ŁADUNKI ${Math.round(row.loadGap)} / RAMY ${Math.round(row.frameGap)} mm`);
+    }
     add(svg, 'text', {x:9,y:y+rowHeight/2+4,fill:'#38554e','font-size':13,'font-family':'Space Grotesk','font-weight':700}, `R${String(index+1).padStart(2,'0')}`);
     add(svg, 'text', {x:583,y:y+rowHeight/2+4,fill:'#647e72','font-size':11,'font-family':'Space Grotesk','font-weight':700}, `${Math.round(row.depth)} mm`);
     const hit = add(svg, 'rect', {x:x0,y,width:rackWidth,height:rowHeight,fill:'transparent',class:'plan-hit',tabindex:0,role:'button','aria-label':`Pokaż widok frontowy regału ${index+1}`});
-    hit.addEventListener('click', () => onSelect(row.id));
-    hit.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(row.id); } });
+    hit.addEventListener('click', () => onSelect(rowId));
+    hit.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(rowId); } });
     const handleX = x0 + rackWidth + 19, handleY = y + rowHeight/2;
     const handle = add(svg, 'g', {class:'plan-add',tabindex:0,role:'button','aria-label':`Dodaj sekcję do regału ${index+1}; przeciągnij lub kliknij`});
     handle.append(element('rect',{x:handleX-15,y:handleY-16,width:37,height:32,rx:5,fill:'#e7f1e8',stroke:'#79a185','stroke-dasharray':'4 3'}));
@@ -88,9 +93,9 @@ function drawPlan(svg, config, result, selectedId, onSelect, onAddSection) {
     let startX = null;
     handle.addEventListener('pointerdown', event => { event.preventDefault(); event.stopPropagation(); startX = event.clientX; handle.setPointerCapture(event.pointerId); handle.classList.add('is-dragging'); });
     handle.addEventListener('pointermove', event => { if (startX === null) return; handle.setAttribute('transform', `translate(${Math.max(0,event.clientX-startX)},0)`); });
-    handle.addEventListener('pointerup', event => { if (startX === null) return; event.stopPropagation(); startX = null; onAddSection(row.id); });
+    handle.addEventListener('pointerup', event => { if (startX === null) return; event.stopPropagation(); startX = null; onAddSection(rowId); });
     handle.addEventListener('pointercancel', () => { startX = null; handle.removeAttribute('transform'); handle.classList.remove('is-dragging'); });
-    handle.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onAddSection(row.id); } });
+    handle.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onAddSection(rowId); } });
     y += rowHeight;
   });
   if (result.aisles.length > result.rows.length) drawAisle(result.aisles.at(-1), result.aisles.length-1);

@@ -255,7 +255,7 @@ function create(container, onAddSection) {
         if (config.protection === 'polymer') xPosts.forEach(postX => plasticTube(postX, aisleSide));
         if (config.protection === 'barrier') box(length / 2, 0.28, aisleSide + (laneIndex === 0 ? -0.16 : 0.16), length, 0.15, 0.1, materials.guard, true);
       });
-      addMarker([length + 0.15, height * 0.55, (start + end) / 2], 'scene3d-add', '+', `Dodaj sekcję do regału ${rowIndex + 1}`, () => onAddSection(row.id));
+      addMarker([length + 0.15, height * 0.55, (start + end) / 2], 'scene3d-add', '+', `Dodaj sekcję do regału ${rowIndex + 1}`, () => onAddSection(row.sourceId ?? row.id));
     });
     fitCamera(maxLength, totalDepth, height);
     hasModel = true;

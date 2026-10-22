@@ -45,7 +45,17 @@ function calculate(config) {
     previousLevel = level;
     return level;
   });
-  const rows = racks.map(rack => {
+  const rackCopies = racks.flatMap(rack => {
+    const quantity = Math.max(1, Math.min(50, Math.round(Number(rack.quantity) || 1)));
+    return Array.from({ length: quantity }, (_, copyIndex) => ({
+      ...rack,
+      id: copyIndex === 0 ? rack.id : `${rack.id}-${copyIndex + 1}`,
+      sourceId: rack.id,
+      copyIndex,
+      quantity: 1
+    }));
+  });
+  const rows = rackCopies.map(rack => {
     const sections = rack.sections.map(positions => ({ positions, ...selectBeam(palletWidth, positions, standard) }));
     const beamSum = sections.reduce((sum, s) => sum + (s.length ?? s.needed), 0);
     const minLength = beamSum + (sections.length + 1) * POST_OPTIONS[0];
