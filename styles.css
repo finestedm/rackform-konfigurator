@@ -34,4 +34,26 @@
 .level-decking-field{margin-top:10px}.rack-rear-field{padding:0 14px 8px;max-width:420px}.rack-rear-field select{height:34px}.equipment-hint{margin-top:10px}
 .pallet-preview{margin-top:16px;border:1px solid #d5e1da;background:#f3f7f3;min-height:190px;overflow:hidden}.pallet-preview svg{display:block;width:100%;height:190px}.data-table{width:100%;border-collapse:collapse;font-size:12px}.data-table th,.data-table td{border-bottom:1px solid #dce6df;padding:8px 7px;text-align:left;vertical-align:middle}.data-table thead th{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#789087;background:#f4f8f5}.data-table tbody th{color:#416258;font-size:13px;width:55px}.data-table input,.data-table select{width:100%;min-width:0;height:32px}.level-table th:nth-child(2),.level-table th:nth-child(3){width:105px}.level-table th:nth-child(4){width:145px}.level-position{color:#72877e;font-size:11px;line-height:1.35}.rack-table th:first-child{width:120px}.rack-table th:nth-child(2){width:78px}.rack-table th:nth-child(3){width:75px}.rack-table th:nth-child(5){width:125px}.rack-table th:last-child{width:125px}.rack-table-row.selected{background:#f6faf6}.rack-select{border:0;background:none;color:#345e50;font:700 12px 'Space Grotesk';padding:3px;text-align:left;cursor:pointer}.rack-sections-cell{min-width:260px}.rack-section-inline{display:grid;grid-template-columns:72px minmax(95px,1fr) 24px;gap:5px;align-items:center;margin-bottom:5px}.rack-section-inline small{color:#6d8179;font-size:10px}.rack-table-actions{white-space:nowrap}.rack-table-actions button{margin-right:2px}.rack-table-row:not(.selected) .rack-sections-cell{color:#71857d;font-size:11px;line-height:1.4}
 @media(max-width:720px){.data-table{font-size:11px}.level-table th:nth-child(5),.level-table td:nth-child(5){display:none}.level-table th:nth-child(2),.level-table th:nth-child(3){width:86px}.rack-table{min-width:760px}#rack-list{overflow-x:auto}}
-.rack-table td:nth-child(2) select{min-width:105px}.rack-section-inline{grid-template-columns:92px 58px minmax(105px,1fr)}.rack-section-inline input{height:30px;border:1px solid #dbe2df;background:#fff;color:#1e3237;font:700 11px 'Space Grotesk';padding:0 7px}
+.rack-table td:nth-child(2) select{min-width:105px}.rack-section-inline{grid-template-columns:92px 58px minmax(105px,1fr) 24px}.rack-section-inline input{height:30px;border:1px solid #dbe2df;background:#fff;color:#1e3237;font:700 11px 'Space Grotesk';padding:0 7px}.section-group-delete{font-size:17px;padding:2px;color:#8a5d53}.section-group-delete:not(:disabled):hover{color:#9b3f2e;background:#f8ebe7}
+
+#print-sheets{display:none}
+@media print{
+  @page{size:A4 landscape;margin:11mm}
+  body{background:#fff!important;color:#16252d}
+  body>*:not(#print-sheets){display:none!important}
+  #print-sheets{display:block!important}
+  .print-rack-sheet{display:block;break-after:page;page-break-after:always;min-height:180mm;padding:0;color:#16252d}
+  .print-rack-sheet:last-child{break-after:auto;page-break-after:auto}
+  .print-rack-heading{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #19343a;padding-bottom:5mm;margin-bottom:6mm}
+  .print-rack-heading p{margin:0 0 2mm;color:#7a8e86;font:700 8pt 'DM Sans';letter-spacing:.15em}
+  .print-rack-heading h1{margin:0;font:600 21pt 'Space Grotesk';letter-spacing:-.045em}
+  .print-rack-heading strong{color:#476e58;font:700 9pt 'DM Sans';letter-spacing:.12em}
+  .print-rack-body{display:grid;grid-template-columns:1.15fr .85fr;gap:8mm;align-items:start}
+  .print-front-drawing{width:100%;height:auto;max-height:155mm;border:1px solid #dbe4df;background:#f8faf8}
+  .print-rack-description{border-left:1px solid #dfe7e2;padding-left:6mm}
+  .print-rack-description h2{font:700 10pt 'Space Grotesk';letter-spacing:.04em;color:#3e5f53;margin:0 0 3mm;padding-bottom:2mm;border-bottom:1px solid #e1e8e4}
+  .print-rack-description h2:not(:first-child){margin-top:5mm}
+  .print-specs{display:grid;grid-template-columns:1fr 1fr;gap:2.5mm 5mm;margin:0}
+  .print-spec{margin:0}.print-spec dt{font:700 7.5pt 'DM Sans';color:#789088;letter-spacing:.04em}.print-spec dd{margin:1mm 0 0;font:600 8.5pt 'Space Grotesk';line-height:1.32}
+  .print-level-table{width:100%;border-collapse:collapse;font-size:7.5pt}.print-level-table th,.print-level-table td{text-align:left;border-bottom:1px solid #dfe7e2;padding:1.7mm 1mm}.print-level-table th{color:#6f847b;font-weight:700}
+}
