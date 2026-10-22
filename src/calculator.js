@@ -89,10 +89,10 @@ function calculate(config) {
   if (rows.some(row => row.sections.some(section => section.length > 2850))) warnings.push('Trawers powyżej 2850 mm może być nieoptymalny zależnie od masy ładunku. Zweryfikuj nośność z projektantem.');
   const expanded = levelsData.filter(level => level.effectiveClear > level.clearHeight).map(level => level.index);
   if (expanded.length) warnings.push(`Poziom ${expanded.join(', ')}: zadane światło jest za małe dla ładunku i 100 mm luzu lub nie mieści się w skoku 50 mm. Do obliczeń przyjęto większą wysokość.`);
-  const supportRequired = frameDepth <= palletDepth;
+  const supportRequired = frameDepth >= palletDepth;
   if (supportRequired) warnings.push(config.decking === 'none' || !config.decking
-    ? `Głębokość ramy ${frameDepth} mm nie przekracza głębokości ładunku ${palletDepth} mm. Wymagane jest wypełnienie poziomów, np. poprzeczki lub krata; obecnie wybrano brak wypełnienia.`
-    : `Głębokość ramy ${frameDepth} mm nie przekracza głębokości ładunku ${palletDepth} mm. Wymagane jest odpowiednie wypełnienie poziomów; sprawdź podparcie wybranego rozwiązania.`);
+    ? `Głębokość ramy ${frameDepth} mm jest równa lub większa od głębokości ładunku ${palletDepth} mm. Wymagane jest wypełnienie poziomów, np. poprzeczki lub krata; obecnie wybrano brak wypełnienia.`
+    : `Głębokość ramy ${frameDepth} mm jest równa lub większa od głębokości ładunku ${palletDepth} mm. Wymagane jest odpowiednie wypełnienie poziomów; sprawdź podparcie wybranego rozwiązania.`);
   if (config.frameHeight != null && Number(config.frameHeight) < requiredFrameHeight) warnings.push(`Wysokość ramy została zwiększona do ${requiredFrameHeight} mm, aby pomieścić poziomy i ładunki.`);
   return { rows, layoutRows, aisles, levelsData, valid, longestMin, longestMax, frameDepth, frameGap, loadGap, supportRequired, requiredFrameHeight, rackHeight, aisle, overallDepth, spots: rows.reduce((sum, row) => sum + row.spots, 0), warnings };
 }

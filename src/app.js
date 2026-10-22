@@ -252,7 +252,7 @@ function render() {
   $('#frame-depth-auto').hidden = state.frameDepth == null;
   $('#frame-height-auto').hidden = state.frameHeight == null;
   $('#frame-height').min = result.requiredFrameHeight;
-  $('#frame-note').textContent = `Głębokość ramy ${format(result.frameDepth)}; domyślnie 100 mm mniej niż ładunek. Wysokość co ${FRAME_HEIGHT_STEP} mm (minimum ${format(result.requiredFrameHeight)}). ${result.supportRequired ? 'Gdy rama nie jest głębsza od ładunku, wymagane jest wypełnienie, np. poprzeczki lub krata.' : ''}`;
+  $('#frame-note').textContent = `Głębokość ramy ${format(result.frameDepth)}; domyślnie 100 mm mniej niż ładunek. Wysokość co ${FRAME_HEIGHT_STEP} mm (minimum ${format(result.requiredFrameHeight)}). ${result.supportRequired ? 'Gdy rama jest równa lub głębsza od ładunku, wymagane jest wypełnienie, np. poprzeczki lub krata.' : ''}`;
   document.querySelectorAll('[data-standard]').forEach(button => button.classList.toggle('active', button.dataset.standard === state.standard));
   $('#clearance-note').textContent = `Założony minimalny luz boczny i między paletami: ${CLEARANCE[state.standard]} mm. Dobór z długości ${state.standard === 'standard' ? '1000 / 1900 / 2700 / 3600' : '1000 / 1900 / 2850 / 3800'} mm.`;
   renderLevelCards(result); renderRackCards(result); renderDrawing(result);
