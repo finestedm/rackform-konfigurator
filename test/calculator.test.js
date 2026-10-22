@@ -100,3 +100,12 @@ test('wysokość ramy dobierana jest co 250 mm i nie może być niższa od wymag
   assert.equal(calculate({...base,frameHeight:automatic.requiredFrameHeight+260}).rackHeight, automatic.requiredFrameHeight+500);
   assert.equal(calculate({...base,frameHeight:250}).rackHeight, automatic.requiredFrameHeight);
 });
+
+test('ilość identycznych regałów rozwija się w planie bez powielania konfiguracji', () => {
+  const result = calculate({palletWidth:800,palletDepth:1200,palletHeight:1400,levels:2,standard:'standard',truck:'reach',racks:[{id:7,type:'single',quantity:3,sections:[2]}]});
+  assert.equal(result.rows.length, 3);
+  assert.deepEqual(result.rows.map(row => row.sourceId), [7, 7, 7]);
+  assert.deepEqual(result.rows.map(row => row.id), [7, '7-2', '7-3']);
+  assert.equal(result.spots, 12);
+  assert.equal(result.layoutRows.length, 3);
+});
