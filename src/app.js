@@ -93,13 +93,13 @@ function renderLevelCards(result) {
   table.append(body); list.append(table);
 }
 
-function addSection(id) { const rack = state.racks.find(row => row.id === id); if (!rack) return; rack.sections.push(2); selectedRack = id; render(); }
+function addSection(id) { const rack = state.racks.find(row => row.id === id); if (!rack) return; rack.sections.push(2); if (Array.isArray(rack.sectionLengths)) rack.sectionLengths.push(null); selectedRack = id; render(); }
 
 function nextRackId() { return Math.max(0, ...state.racks.map(rack => Number(rack.id) || 0)) + 1; }
 function duplicateRack(id) {
   const source = state.racks.find(rack => rack.id === id);
   if (!source) return;
-  const copy = { ...source, id: nextRackId(), quantity: 1, rearProtection: source.rearProtection ?? state.rearProtection, sections: [...source.sections] };
+  const copy = { ...source, id: nextRackId(), quantity: 1, rearProtection: source.rearProtection ?? state.rearProtection, sections: [...source.sections], sectionLengths: Array.isArray(source.sectionLengths) ? [...source.sectionLengths] : undefined };
   state.racks.push(copy);
   selectedRack = copy.id;
   render();
@@ -170,7 +170,7 @@ function renderRackCards(result) {
 function renderRackTable(result) {
   const list = $('#rack-list'); list.replaceChildren();
   const table = document.createElement('table'); table.className = 'data-table rack-table';
-  table.innerHTML = '<thead><tr><th>Konfiguracja</th><th>Typ</th><th>Ilość</th><th>Sekcje / trawersy</th><th>Tył</th><th>Akcje</th></tr></thead>';
+  table.innerHTML = '<thead><tr><th>Konfiguracja</th><th>Typ</th><th>Ilość regałów</th><th>Sekcje · długość / ilość</th><th>Tył</th><th>Akcje</th></tr></thead>';
   const body = document.createElement('tbody');
   state.racks.forEach((rack, groupIndex) => {
     const row = result.rows.find(candidate => candidate.sourceId === rack.id || candidate.id === rack.id);
@@ -178,12 +178,27 @@ function renderRackTable(result) {
     const active = selectedRack === rack.id;
     const tr = document.createElement('tr'); tr.className = active ? 'rack-table-row selected' : 'rack-table-row';
     const titleCell = document.createElement('th'); titleCell.scope = 'row'; const title = document.createElement('button'); title.type = 'button'; title.className = 'rack-select'; title.textContent = `${String(groupIndex + 1).padStart(2,'0')} · ${row.type === 'double' ? 'Podwójny' : 'Pojedynczy'}`; title.setAttribute('aria-expanded', String(active)); title.addEventListener('click', () => { selectedRack = rack.id; render(); }); titleCell.append(title);
-    const typeCell = document.createElement('td'); typeCell.textContent = row.type === 'double' ? '2 strony' : '1 strona';
+    const typeCell = document.createElement('td');
+    const typeSelect = document.createElement('select'); typeSelect.setAttribute('aria-label', `Typ regału w konfiguracji ${groupIndex}`);
+    [['single','Pojedynczy'],['double','Podwójny']].forEach(([value, label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; typeSelect.append(option); });
+    typeSelect.value = rack.type; typeSelect.addEventListener('change', () => { rack.type = typeSelect.value; selectedRack = rack.id; render(); }); typeCell.append(typeSelect);
     const qtyCell = document.createElement('td'); const qty = document.createElement('input'); qty.type = 'number'; qty.min = '1'; qty.max = '50'; qty.step = '1'; qty.value = rack.quantity; qty.setAttribute('aria-label', `Ilość regałów w konfiguracji ${groupIndex}`); qty.addEventListener('change', () => { rack.quantity = numberValue(qty.value, 1, 50); selectedRack = rack.id; render(); }); qtyCell.append(qty);
     const sectionsCell = document.createElement('td'); sectionsCell.className = 'rack-sections-cell';
+    const groups = sectionGroups(rack, row);
     if (active) {
-      rack.sections.forEach((positions, sectionIndex) => { const section = row.sections[sectionIndex]; const wrap = document.createElement('div'); wrap.className = 'rack-section-inline'; const select = document.createElement('select'); select.setAttribute('aria-label', `Liczba palet w sekcji ${sectionIndex + 1}, konfiguracja ${groupIndex}`); for (let count = 1; count <= 4; count++) { const option = document.createElement('option'); option.value = count; option.textContent = `${count} pal.`; select.append(option); } select.value = positions; select.addEventListener('change', () => { rack.sections[sectionIndex] = Number(select.value); selectedRack = rack.id; render(); }); const beam = document.createElement('small'); beam.textContent = section.length ? `${format(section.length)} · luz ${Math.round(section.clearance)} mm` : 'brak trawersu'; const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.textContent = '×'; remove.title = 'Usuń sekcję'; remove.disabled = rack.sections.length === 1; remove.addEventListener('click', () => { rack.sections.splice(sectionIndex, 1); render(); }); wrap.append(select, beam, remove); sectionsCell.append(wrap); }); const add = document.createElement('button'); add.type = 'button'; add.className = 'small-add'; add.textContent = '＋ Sekcja'; add.addEventListener('click', () => addSection(rack.id)); sectionsCell.append(add);
-    } else { sectionsCell.textContent = rack.sections.map((positions, index) => `${index + 1}: ${positions} pal. / ${row.sections[index]?.length ?? '—'} mm`).join(' · '); }
+      groups.forEach((group, groupSectionIndex) => {
+        const wrap = document.createElement('div'); wrap.className = 'rack-section-inline';
+        const length = document.createElement('select'); length.setAttribute('aria-label', `Długość trawersu grupy ${groupSectionIndex + 1}, konfiguracja ${groupIndex}`);
+        beamCatalog().filter(value => positionsForBeamLength(value) > 0).forEach(value => { const option = document.createElement('option'); option.value = value; option.textContent = `${value} mm`; length.append(option); });
+        length.value = group.length;
+        const count = document.createElement('input'); count.type = 'number'; count.min = '1'; count.max = '50'; count.step = '1'; count.value = group.count; count.setAttribute('aria-label', `Ilość sekcji ${group.length} mm, konfiguracja ${groupIndex}`);
+        const apply = () => { groups[groupSectionIndex].length = Number(length.value); groups[groupSectionIndex].count = numberValue(count.value, 1, 50); applySectionGroups(rack, groups); selectedRack = rack.id; render(); };
+        length.addEventListener('change', apply); count.addEventListener('change', apply);
+        const info = document.createElement('small'); info.textContent = `${group.count} × ${group.length} mm`;
+        wrap.append(length, count, info); sectionsCell.append(wrap);
+      });
+      const add = document.createElement('button'); add.type = 'button'; add.className = 'small-add'; add.textContent = '＋ Grupa sekcji'; add.addEventListener('click', () => { groups.push({ length: beamCatalog().find(value => positionsForBeamLength(value) > 0) ?? beamCatalog()[0], count: 1 }); applySectionGroups(rack, groups); selectedRack = rack.id; render(); }); sectionsCell.append(add);
+    } else { sectionsCell.textContent = groups.map(group => `${group.length} mm: ${group.count} sekcji`).join(' · '); }
     const rearCell = document.createElement('td'); const rear = document.createElement('select'); rear.setAttribute('aria-label', `Zabezpieczenie tyłu konfiguracji ${groupIndex}`); [['none','Brak'],['mesh','Siatka'],['backstops','Backstopy']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; rear.append(option); }); rear.value = rack.rearProtection ?? state.rearProtection; rear.addEventListener('change', () => { rack.rearProtection = rear.value; selectedRack = rack.id; render(); }); rearCell.append(rear);
     const actions = document.createElement('td'); actions.className = 'rack-table-actions'; const up = document.createElement('button'); up.type = 'button'; up.className = 'icon-button'; up.textContent = '↑'; up.title = 'Przenieś wyżej'; up.disabled = groupIndex === 0; up.addEventListener('click', () => moveRack(rack.id, -1)); const down = document.createElement('button'); down.type = 'button'; down.className = 'icon-button'; down.textContent = '↓'; down.title = 'Przenieś niżej'; down.disabled = groupIndex === state.racks.length - 1; down.addEventListener('click', () => moveRack(rack.id, 1)); const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.className = 'rack-action'; duplicate.textContent = 'Duplikuj'; duplicate.addEventListener('click', () => duplicateRack(rack.id)); const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.textContent = '×'; remove.title = 'Usuń konfigurację'; remove.disabled = state.racks.length === 1; remove.addEventListener('click', () => { state.racks = state.racks.filter(item => item.id !== rack.id); selectedRack = state.racks[0].id; render(); }); actions.append(up, down, duplicate, remove);
     tr.append(titleCell, typeCell, qtyCell, sectionsCell, rearCell, actions); body.append(tr);
@@ -192,6 +207,32 @@ function renderRackTable(result) {
 }
 
 function numberValue(value, min, max) { const parsed = Number(value); return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : min; }
+
+function beamCatalog() { return state.standard === 'nfpa' ? [1000, 1900, 2850, 3800] : [1000, 1900, 2700, 3600]; }
+function positionsForBeamLength(length) {
+  const clearance = state.standard === 'nfpa' ? 100 : 75;
+  let positions = 0;
+  for (let count = 1; count <= 20; count += 1) {
+    if (count * state.palletWidth + (count + 1) * clearance <= length) positions = count;
+    else break;
+  }
+  return positions;
+}
+function sectionGroups(rack, row) {
+  const groups = [];
+  rack.sections.forEach((positions, index) => {
+    const section = row.sections[index];
+    const length = section?.length ?? beamCatalog()[0];
+    const existing = groups.find(group => group.length === length);
+    if (existing) existing.count += 1;
+    else groups.push({ length, count: 1, positions });
+  });
+  return groups;
+}
+function applySectionGroups(rack, groups) {
+  rack.sections = groups.flatMap(group => Array.from({ length: Math.max(1, Math.min(50, Math.round(group.count) || 1)) }, () => positionsForBeamLength(group.length)));
+  rack.sectionLengths = groups.flatMap(group => Array.from({ length: Math.max(1, Math.min(50, Math.round(group.count) || 1)) }, () => Number(group.length)));
+}
 
 function svgEl(name, attrs = {}) { const el = document.createElementNS('http://www.w3.org/2000/svg', name); for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, String(v)); return el; }
 function addSvg(svg, name, attrs, text) { const el = svgEl(name, attrs); if (text != null) el.textContent = text; svg.append(el); return el; }
@@ -258,23 +299,31 @@ function renderPalletPreview() {
   const svg = $('#pallet-preview-svg'); if (!svg) return;
   svg.replaceChildren();
   const width = Math.max(1, state.palletWidth), depth = Math.max(1, state.palletDepth), height = Math.max(1, state.palletHeight);
-  const scale = Math.min(0.22, 250 / (width + depth * 0.45));
-  const dx = width * scale, dy = depth * scale * 0.45, cargoH = Math.min(62, Math.max(30, height * 0.045));
-  const x = 70, y = 136;
+  const scale = Math.min(0.18, 260 / (width + depth * 0.6), 112 / height);
+  const dx = width * scale, dy = depth * scale * 0.5, cargoH = height * scale, palletH = Math.max(7, 140 * scale);
+  const x = 92, y = 148;
   const A = [x, y], B = [x + dx, y], D = [x + dy, y - dy * 0.55], C = [B[0] + dy, B[1] - dy * 0.55];
+  const lower = point => [point[0], point[1] + palletH];
   const lift = point => [point[0], point[1] - cargoH];
+  const PA = lower(A), PB = lower(B), PC = lower(C), PD = lower(D);
   const LA = lift(A), LB = lift(B), LC = lift(C), LD = lift(D);
   const polygon = (points, attrs) => { const p = svgEl('polygon', {...attrs, points: points.map(point => point.join(',')).join(' ')}); svg.append(p); return p; };
-  polygon([A,B,C,D], {fill:'#b98a55', stroke:'#7b6245','stroke-width':1});
-  polygon([LA,LB,LC,LD], {fill:'#b6c8ba', stroke:'#668577','stroke-width':1});
-  polygon([LA,LB,B,A], {fill:'#9fb5a6', stroke:'#668577','stroke-width':1});
-  polygon([LB,LC,C,B], {fill:'#8fa99a', stroke:'#668577','stroke-width':1});
-  for (let i = 1; i < 4; i++) { const px = A[0] + dx * i / 4; svg.append(svgEl('line',{x1:px,y1:y-1,x2:px,y2:y+7,stroke:'#ead0a4','stroke-width':2})); }
+  polygon([A,B,C,D], {fill:'#c0d0c4', stroke:'#668577','stroke-width':1});
+  polygon([A,B,PB,PA], {fill:'#9d7953', stroke:'#735a40','stroke-width':1});
+  polygon([B,C,PC,PB], {fill:'#876344', stroke:'#735a40','stroke-width':1});
+  polygon([LA,LB,LC,LD], {fill:'#c4d3c8', stroke:'#668577','stroke-width':1});
+  polygon([LA,LB,B,A], {fill:'#aec3b4', stroke:'#668577','stroke-width':1});
+  polygon([LB,LC,C,B], {fill:'#99b1a1', stroke:'#668577','stroke-width':1});
+  for (let i = 1; i < 5; i++) { const px = A[0] + dx * i / 5; svg.append(svgEl('line',{x1:px,y1:y-1,x2:px,y2:y+7,stroke:'#f0dfbd','stroke-width':1.5})); }
+  for (let i = 1; i < 5; i++) { const px = A[0] + (dx + dy) * i / 5; const py = y - dy * 0.55 * i / 5; svg.append(svgEl('line',{x1:px,y1:py,x2:px,y2:py+palletH,stroke:'#d4ae7c','stroke-width':1})); }
+  for (let i = 0; i < 3; i++) { const bx = A[0] + dx * (0.18 + i * 0.32); polygon([[bx,y+2],[bx+dx*.12,y+2],[bx+dx*.12,y+palletH],[bx,y+palletH]], {fill:'#75563e',stroke:'#604832','stroke-width':.5}); }
+  for (let i = 1; i < 4; i++) { const px = LA[0] + dx * i / 4; svg.append(svgEl('line',{x1:px,y1:LA[1]+4,x2:px+dy,y2:LD[1]+4,stroke:'#e8f0e8','stroke-width':1,'stroke-opacity':.72})); }
+  for (let i = 1; i < 4; i++) { const py = LA[1] + cargoH * i / 4; svg.append(svgEl('line',{x1:LA[0]+2,y1:py,x2:LB[0]-2,y2:py,stroke:'#e8f0e8','stroke-width':.8,'stroke-opacity':.55})); }
   const line = (a,b,attrs={}) => svg.append(svgEl('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],...attrs}));
   const text = (point,value,attrs={}) => { const node=svgEl('text',{x:point[0],y:point[1],...attrs}); node.textContent=value; svg.append(node); };
-  line([A[0], y+16], [B[0], y+16], {stroke:'#496c63','stroke-width':1}); line([A[0],y+11],[A[0],y+21],{stroke:'#496c63'}); line([B[0],y+11],[B[0],y+21],{stroke:'#496c63'}); text([(A[0]+B[0])/2,y+30,],`SZER. ${width} mm`,{'text-anchor':'middle',fill:'#496c63','font-size':11,'font-family':'DM Sans','font-weight':700});
-  line([A[0]-5,A[1]-2],[D[0]-5,D[1]-2],{stroke:'#496c63','stroke-width':1}); line([A[0]-9,A[1]-1],[A[0]-2,A[1]-4],{stroke:'#496c63'}); line([D[0]-9,D[1]-1],[D[0]-2,D[1]-4],{stroke:'#496c63'}); text([D[0]-17,(A[1]+D[1])/2],`GŁ. ${depth} mm`,{'text-anchor':'middle',fill:'#496c63','font-size':11,'font-family':'DM Sans','font-weight':700,transform:`rotate(-24 ${D[0]-17} ${(A[1]+D[1])/2})`});
-  line([C[0]+12,C[1]],[LC[0]+12,LC[1]],{stroke:'#496c63','stroke-width':1}); line([C[0]+8,C[1]],[C[0]+16,C[1]],{stroke:'#496c63'}); line([LC[0]+8,LC[1]],[LC[0]+16,LC[1]],{stroke:'#496c63'}); text([C[0]+22,(C[1]+LC[1])/2+4],`WYS. ${height} mm`,{fill:'#496c63','font-size':11,'font-family':'DM Sans','font-weight':700});
+  line([PA[0], PA[1]+14], [PB[0], PB[1]+14], {stroke:'#496c63','stroke-width':1}); line([PA[0],PA[1]+9],[PA[0],PA[1]+19],{stroke:'#496c63'}); line([PB[0],PB[1]+9],[PB[0],PB[1]+19],{stroke:'#496c63'}); text([(PA[0]+PB[0])/2,PA[1]+29],`SZER. ${width} mm`,{'text-anchor':'middle',fill:'#496c63','font-size':11,'font-family':'DM Sans','font-weight':700});
+  line([A[0]-8,A[1]],[D[0]-8,D[1]],{stroke:'#496c63','stroke-width':1}); line([A[0]-12,A[1]+2],[A[0]-4,A[1]-2],{stroke:'#496c63'}); line([D[0]-12,D[1]+2],[D[0]-4,D[1]-2],{stroke:'#496c63'}); text([D[0]-22,(A[1]+D[1])/2],`GŁ. ${depth} mm`,{'text-anchor':'middle',fill:'#496c63','font-size':11,'font-family':'DM Sans','transform':`rotate(-24 ${D[0]-22} ${(A[1]+D[1])/2})`});
+  line([C[0]+13,C[1]],[LC[0]+13,LC[1]],{stroke:'#496c63','stroke-width':1}); line([C[0]+9,C[1]],[C[0]+17,C[1]],{stroke:'#496c63'}); line([LC[0]+9,LC[1]],[LC[0]+17,LC[1]],{stroke:'#496c63'}); text([C[0]+24,(C[1]+LC[1])/2+4],`WYS. ${height} mm`,{fill:'#496c63','font-size':11,'font-family':'DM Sans'});
   text([18,25],'PALETA / ŁADUNEK · RZUT IZOMETRYCZNY',{fill:'#49625b','font-size':11,'font-family':'DM Sans','font-weight':700});
 }
 

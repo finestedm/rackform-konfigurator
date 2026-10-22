@@ -76,7 +76,13 @@ function calculate(config) {
     const minimumLoadGap = 100 + extraGap;
     const frameGap = Math.max(minimumFrameGap, minimumLoadGap + palletDepth - frameDepth);
     const loadGap = frameGap + frameDepth - palletDepth;
-    const sections = rack.sections.map(positions => ({ positions, ...selectBeam(palletWidth, positions, standard) }));
+    const sections = rack.sections.map((positions, sectionIndex) => {
+      const automatic = selectBeam(palletWidth, positions, standard);
+      const requestedLength = Number(rack.sectionLengths?.[sectionIndex]);
+      const length = Number.isFinite(requestedLength) && requestedLength >= automatic.needed ? requestedLength : automatic.length;
+      const clearance = length ? (length - positions * palletWidth) / (positions + 1) : automatic.clearance;
+      return { positions, ...automatic, length, clearance, requestedLength: Number.isFinite(requestedLength) ? requestedLength : null };
+    });
     const beamSum = sections.reduce((sum, s) => sum + (s.length ?? s.needed), 0);
     const minLength = beamSum + (sections.length + 1) * POST_OPTIONS[0];
     const nominalLength = beamSum + (sections.length + 1) * POST_OPTIONS[1];
