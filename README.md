@@ -9,7 +9,7 @@ Statyczny konfigurator do wstępnego planowania regałów paletowych. Działa be
 - dobór trawersu dla 1–4 palet w każdej sekcji;
 - zestawy 1000 / 1900 / 2700 / 3600 mm (standard) i 1000 / 1900 / 2850 / 3800 mm (NFPA 13);
 - dowolna liczba sekcji oraz rzędów pojedynczych i podwójnych;
-- brak wypełnienia lub panel siatkowy, krata, poprzeczki albo płyta wiórowa; ochrona słupów: brak, odbojnica lub tuba z tworzywa zakładana na słup; zabezpieczenie tyłu: brak, wygrodzenie siatkowe pleców albo backstopy;
+- brak wypełnienia lub panel siatkowy, krata, poprzeczki albo płyta wiórowa, wybierane osobno dla każdego poziomu; ochrona słupów: brak, odbojnica lub tuba z tworzywa zakładana na słup; zabezpieczenie tyłu: brak, wygrodzenie siatkowe pleców albo backstopy, wybierane osobno dla każdego regału;
 - orientacyjny korytarz dla wózka czołowego, reach trucka i VNA;
 - rysunek wybranego rzędu i wynik gotowy do wydruku lub zapisania jako PDF;
 - plan wszystkich regałów z korytarzami pracy oraz interaktywny model 3D z obrotem, przybliżeniem i powiększeniem na cały ekran;
@@ -29,7 +29,7 @@ Każdy poziom ma edytowalne światło i wysokość ładunku. Światło przyjęte
 
 Plan umieszcza korytarz przed każdym rzędem, a także za ostatnim rzędem, jeśli jest podwójny. Pokazywana głębokość układu obejmuje te korytarze. Plan i widok 3D są poglądowe; korytarze oraz model wymagają doprecyzowania dla konkretnej hali i wózka.
 
-Zabezpieczenie tyłu jest wspólne dla wszystkich regałów. Na pojedynczym rzędzie umieszczamy je przy tylnej krawędzi, a na podwójnym po obu stronach środkowego odstępu. Plan i widok 3D pokazują siatkę jako panel, a backstopy jako poziome ograniczniki przy poziomach składowania. Ich gabaryt i mocowanie wymagają osobnego doboru.
+Globalne pole zabezpieczenia tyłu i wypełnienia poziomów ustawia wartości początkowe dla wszystkich elementów. Następnie można zmienić wypełnienie osobno przy każdym poziomie oraz wygrodzenie lub backstopy osobno przy każdym regale. Na pojedynczym rzędzie zabezpieczenie tyłu umieszczamy przy tylnej krawędzi, a na podwójnym po obu stronach środkowego odstępu. Plan i widok 3D pokazują wygrodzenie jako szarą siatkę, a backstopy jako poziome ograniczniki przy poziomach składowania. Ich gabaryt i mocowanie wymagają osobnego doboru.
 
 Odbojnica z tworzywa jest tubą zakładaną na słup od strony korytarza. Model 3D pokazuje jej ogólną formę bez odwzorowania konkretnego produktu lub jego parametrów.
 
