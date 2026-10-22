@@ -207,6 +207,7 @@ function create(container, onAddSection) {
 
     result.layoutRows.forEach((row, rowIndex) => {
       const length = M(row.nominalLength);
+      const rowHeight = M(row.rackHeight);
       const start = M(row.start), end = M(row.end);
       const laneDepth = M(result.frameDepth);
       const postDepth = 0.1;
@@ -230,17 +231,17 @@ function create(container, onAddSection) {
       lanes.forEach(([front, back], laneIndex) => {
         xPosts.forEach(postX => {
           [front, back].forEach(z => {
-            box(postX, height / 2, z, 0.1, height, 0.1, materials.post, true);
-            box(postX, height - 0.018, z, 0.105, 0.035, 0.105, materials.postTop);
+            box(postX, rowHeight / 2, z, 0.1, rowHeight, 0.1, materials.post, true);
+            box(postX, rowHeight - 0.018, z, 0.105, 0.035, 0.105, materials.postTop);
           });
-          for (let y = 0.42, segment = 0; y < height - 0.4; y += 1.1, segment++) {
-            const top = Math.min(y + 1.1, height - 0.35);
+          for (let y = 0.42, segment = 0; y < rowHeight - 0.4; y += 1.1, segment++) {
+            const top = Math.min(y + 1.1, rowHeight - 0.35);
             rod([postX, y, segment % 2 ? back : front], [postX, top, segment % 2 ? front : back], 0.018, materials.galva);
             rod([postX, top, front], [postX, top, back], 0.013, materials.galva);
           }
         });
         sections.forEach(({ section, x1, x2 }, sectionIndex) => {
-          result.levelsData.forEach((level, levelIndex) => {
+          row.levelsData.forEach((level, levelIndex) => {
             if (!level.isFloor) {
               const beamY = M(level.beamElevation) + 0.075;
               const beamMaterial = section.length ? materials.beam : materials.invalidBeam;
@@ -266,18 +267,18 @@ function create(container, onAddSection) {
         const rear = row.type === 'single' ? back + postDepth / 2 + rearProjection : laneIndex === 0 ? back + postDepth / 2 + rearProjection : front - postDepth / 2 - rearProjection;
         const rearProtection = row.rearProtection ?? config.rearProtection ?? 'none';
         if (rearProtection === 'mesh') {
-          box(length / 2, height / 2, rear, length, height, 0.016, materials.rearMesh);
-          for (const postX of xPosts) box(postX, height / 2, rear, 0.025, height, 0.025, materials.rearMeshFrame);
-          for (let y = 0.5; y < height; y += 1.3) box(length / 2, y, rear, length, 0.025, 0.025, materials.rearMeshFrame);
-          for (let meshX = 0.35; meshX < length; meshX += 0.55) box(meshX, height / 2, rear, 0.018, height, 0.018, materials.rearMeshFrame);
+          box(length / 2, rowHeight / 2, rear, length, rowHeight, 0.016, materials.rearMesh);
+          for (const postX of xPosts) box(postX, rowHeight / 2, rear, 0.025, rowHeight, 0.025, materials.rearMeshFrame);
+          for (let y = 0.5; y < rowHeight; y += 1.3) box(length / 2, y, rear, length, 0.025, 0.025, materials.rearMeshFrame);
+          for (let meshX = 0.35; meshX < length; meshX += 0.55) box(meshX, rowHeight / 2, rear, 0.018, rowHeight, 0.018, materials.rearMeshFrame);
         } else if (rearProtection === 'backstops') {
-          result.levelsData.forEach(level => box(length / 2, M(level.supportElevation) + 0.35, rear, length, 0.07, 0.08, materials.galva));
+          row.levelsData.forEach(level => box(length / 2, M(level.supportElevation) + 0.35, rear, length, 0.07, 0.08, materials.galva));
         }
         const aisleSide = laneIndex === 0 ? front - postDepth / 2 : back + postDepth / 2;
         if (config.protection === 'polymer') xPosts.forEach(postX => plasticTube(postX, aisleSide));
         if (config.protection === 'barrier') box(length / 2, 0.28, aisleSide + (laneIndex === 0 ? -0.16 : 0.16), length, 0.15, 0.1, materials.guard, true);
       });
-      addMarker([length + 0.15, height * 0.55, (start + end) / 2], 'scene3d-add', '+', `Dodaj sekcję do regału ${rowIndex + 1}`, () => onAddSection(row.sourceId ?? row.id));
+      addMarker([length + 0.15, rowHeight * 0.55, (start + end) / 2], 'scene3d-add', '+', `Dodaj sekcję do regału ${rowIndex + 1}`, () => onAddSection(row.sourceId ?? row.id));
     });
     fitCamera(maxLength, totalDepth, height);
     hasModel = true;

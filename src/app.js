@@ -9,18 +9,25 @@ let selectedRack = state.racks[0].id;
 let viewMode = 'plan';
 let scene3d = null;
 let currentResult;
+let levelModalRackId = null;
+let levelModalDraft = null;
 
+function defaultLevelDetails(palletHeight, count = 3, decking = 'none') {
+  return Array.from({length:count}, (_, index) => ({clearHeight:palletHeight + VERTICAL_CLEARANCE, loadHeight:palletHeight, decking:index === 0 ? 'none' : decking}));
+}
 function defaultState() {
-  return { schemaVersion: 5, palletWidth: 800, palletDepth: 1200, palletHeight: 1400, frameDepth: null, frameExtension: null, levels: 3, levelDetails: Array.from({length:3}, () => ({clearHeight:1500,loadHeight:1400,decking:'none'})), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', quantity: 1, rearProtection: 'none', sections: [3, 2] }] };
+  const palletHeight = 1400, levels = 3;
+  return { schemaVersion: 6, palletWidth: 800, palletDepth: 1200, palletHeight, frameDepth: null, frameExtension: null, levels, levelDetails: defaultLevelDetails(palletHeight, levels), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', quantity: 1, rearProtection: 'none', sections: [3, 2], levels, levelDetails: defaultLevelDetails(palletHeight, levels) }] };
 }
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem('rackform-v1'));
     if (saved && Array.isArray(saved.racks) && saved.racks.length && saved.racks.every(r => Array.isArray(r.sections) && r.sections.length)) {
-      saved.levelDetails = Array.from({length:saved.levels}, (_, index) => saved.levelDetails?.[index] ?? {clearHeight:saved.palletHeight+VERTICAL_CLEARANCE,loadHeight:saved.palletHeight});
+      const legacyLevels = Math.max(1, Math.min(8, Math.round(Number(saved.levels) || 3)));
+      saved.levelDetails = Array.from({length:legacyLevels}, (_, index) => saved.levelDetails?.[index] ?? {clearHeight:saved.palletHeight+VERTICAL_CLEARANCE,loadHeight:saved.palletHeight});
       if (!saved.schemaVersion) saved.levelDetails.forEach(detail => { if (detail.clearHeight === detail.loadHeight + 200) detail.clearHeight = detail.loadHeight + VERTICAL_CLEARANCE; });
       saved.racks = saved.racks.map(rack => ({ ...rack, quantity: Math.max(1, Math.min(50, Math.round(Number(rack.quantity) || 1))) }));
-      saved.schemaVersion = 5;
+      saved.schemaVersion = 6;
       saved.frameDepth = saved.frameDepth == null || !Number.isFinite(Number(saved.frameDepth)) ? null : Number(saved.frameDepth);
       saved.frameExtension = saved.frameExtension == null || !Number.isFinite(Number(saved.frameExtension)) ? null : Number(saved.frameExtension);
       if (['polymer-asafe','polymer-ampere'].includes(saved.protection)) saved.protection = 'polymer';
@@ -28,7 +35,15 @@ function loadState() {
       saved.decking = ['none','mesh','grate','bars','board'].includes(saved.decking) ? saved.decking : 'none';
       saved.rearProtection = ['none','mesh','backstops'].includes(saved.rearProtection) ? saved.rearProtection : 'none';
       saved.levelDetails = saved.levelDetails.map((detail, index) => ({ ...detail, decking: index === 0 ? 'none' : ['none','mesh','grate','bars','board'].includes(detail.decking) ? detail.decking : saved.decking }));
-      saved.racks = saved.racks.map(rack => ({ ...rack, rearProtection: ['none','mesh','backstops'].includes(rack.rearProtection) ? rack.rearProtection : saved.rearProtection }));
+      saved.racks = saved.racks.map(rack => {
+        const levels = Math.max(1, Math.min(8, Math.round(Number(rack.levels) || legacyLevels)));
+        const sourceDetails = rack.levelDetails ?? saved.levelDetails;
+        const levelDetails = Array.from({length:levels}, (_, index) => {
+          const detail = sourceDetails[index] ?? {clearHeight:saved.palletHeight + VERTICAL_CLEARANCE,loadHeight:saved.palletHeight};
+          return {...detail, decking:index === 0 ? 'none' : ['none','mesh','grate','bars','board'].includes(detail.decking) ? detail.decking : saved.decking};
+        });
+        return { ...rack, levels, levelDetails, rearProtection: ['none','mesh','backstops'].includes(rack.rearProtection) ? rack.rearProtection : saved.rearProtection };
+      });
       return saved;
     }
   } catch {}
@@ -43,7 +58,6 @@ function syncInputs() {
   $('#pallet-width').value = state.palletWidth;
   $('#pallet-depth').value = state.palletDepth;
   $('#pallet-height').value = state.palletHeight;
-  $('#levels').value = state.levels;
   $('#truck').value = state.truck;
   $('#decking').value = state.decking;
   $('#protection').value = state.protection;
@@ -54,18 +68,15 @@ function updateFromInputs(event) {
   state.palletWidth = number('#pallet-width', 400, 1800);
   state.palletDepth = number('#pallet-depth', 400, 2000);
   state.palletHeight = number('#pallet-height', 300, 2500);
-  state.levels = number('#levels', 1, 8);
-  if (state.palletHeight !== previousHeight) state.levelDetails.forEach(detail => {
+  if (state.palletHeight !== previousHeight) state.racks.forEach(rack => rack.levelDetails.forEach(detail => {
     if (detail.loadHeight === previousHeight) detail.loadHeight = state.palletHeight;
     if (detail.clearHeight === previousHeight + VERTICAL_CLEARANCE) detail.clearHeight = state.palletHeight + VERTICAL_CLEARANCE;
-  });
-  while (state.levelDetails.length < state.levels) state.levelDetails.push({clearHeight:state.palletHeight+VERTICAL_CLEARANCE,loadHeight:state.palletHeight,decking:'none'});
-  state.levelDetails.length = state.levels;
+  }));
   state.truck = $('#truck').value;
   state.decking = $('#decking').value;
   state.protection = $('#protection').value;
   state.rearProtection = $('#rear-protection').value;
-  if (event?.target?.id === 'decking') state.levelDetails.forEach((detail, index) => { detail.decking = index === 0 ? 'none' : state.decking; });
+  if (event?.target?.id === 'decking') state.racks.forEach(rack => rack.levelDetails.forEach((detail, index) => { detail.decking = index === 0 ? 'none' : state.decking; }));
   if (event?.target?.id === 'rear-protection') state.racks.forEach(rack => { rack.rearProtection = state.rearProtection; });
   render();
 }
@@ -99,7 +110,7 @@ function nextRackId() { return Math.max(0, ...state.racks.map(rack => Number(rac
 function duplicateRack(id) {
   const source = state.racks.find(rack => rack.id === id);
   if (!source) return;
-  const copy = { ...source, id: nextRackId(), quantity: 1, rearProtection: source.rearProtection ?? state.rearProtection, sections: [...source.sections], sectionLengths: Array.isArray(source.sectionLengths) ? [...source.sectionLengths] : undefined };
+  const copy = { ...source, id: nextRackId(), quantity: 1, rearProtection: source.rearProtection ?? state.rearProtection, sections: [...source.sections], sectionLengths: Array.isArray(source.sectionLengths) ? [...source.sectionLengths] : undefined, levelDetails: source.levelDetails.map(detail => ({...detail})) };
   state.racks.push(copy);
   selectedRack = copy.id;
   render();
@@ -202,10 +213,38 @@ function renderRackTable(result) {
       const add = document.createElement('button'); add.type = 'button'; add.className = 'small-add'; add.textContent = '＋ Grupa sekcji'; add.addEventListener('click', () => { groups.push({ length: beamCatalog().find(value => positionsForBeamLength(value) > 0) ?? beamCatalog()[0], count: 1 }); applySectionGroups(rack, groups); selectedRack = rack.id; render(); }); sectionsCell.append(add);
     } else { sectionsCell.textContent = groups.map(group => `${group.length} mm: ${group.count} sekcji`).join(' · '); }
     const rearCell = document.createElement('td'); const rear = document.createElement('select'); rear.setAttribute('aria-label', `Zabezpieczenie tyłu konfiguracji ${groupIndex}`); [['none','Brak'],['mesh','Siatka'],['backstops','Backstopy']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; rear.append(option); }); rear.value = rack.rearProtection ?? state.rearProtection; rear.addEventListener('change', () => { rack.rearProtection = rear.value; selectedRack = rack.id; render(); }); rearCell.append(rear);
-    const actions = document.createElement('td'); actions.className = 'rack-table-actions'; const up = document.createElement('button'); up.type = 'button'; up.className = 'icon-button'; up.textContent = '↑'; up.title = 'Przenieś wyżej'; up.disabled = groupIndex === 0; up.addEventListener('click', () => moveRack(rack.id, -1)); const down = document.createElement('button'); down.type = 'button'; down.className = 'icon-button'; down.textContent = '↓'; down.title = 'Przenieś niżej'; down.disabled = groupIndex === state.racks.length - 1; down.addEventListener('click', () => moveRack(rack.id, 1)); const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.className = 'rack-action'; duplicate.textContent = 'Duplikuj'; duplicate.addEventListener('click', () => duplicateRack(rack.id)); const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.textContent = '×'; remove.title = 'Usuń konfigurację'; remove.disabled = state.racks.length === 1; remove.addEventListener('click', () => { state.racks = state.racks.filter(item => item.id !== rack.id); selectedRack = state.racks[0].id; render(); }); actions.append(up, down, duplicate, remove);
+    const actions = document.createElement('td'); actions.className = 'rack-table-actions'; const levels = document.createElement('button'); levels.type = 'button'; levels.className = 'rack-action rack-levels-action'; levels.textContent = `Poziomy: ${row.levelsData.length}`; levels.title = 'Ustaw poziomy składowania'; levels.addEventListener('click', () => openLevelModal(rack.id)); const up = document.createElement('button'); up.type = 'button'; up.className = 'icon-button'; up.textContent = '↑'; up.title = 'Przenieś wyżej'; up.disabled = groupIndex === 0; up.addEventListener('click', () => moveRack(rack.id, -1)); const down = document.createElement('button'); down.type = 'button'; down.className = 'icon-button'; down.textContent = '↓'; down.title = 'Przenieś niżej'; down.disabled = groupIndex === state.racks.length - 1; down.addEventListener('click', () => moveRack(rack.id, 1)); const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.className = 'rack-action'; duplicate.textContent = 'Duplikuj'; duplicate.addEventListener('click', () => duplicateRack(rack.id)); const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.textContent = '×'; remove.title = 'Usuń konfigurację'; remove.disabled = state.racks.length === 1; remove.addEventListener('click', () => { state.racks = state.racks.filter(item => item.id !== rack.id); selectedRack = state.racks[0].id; render(); }); actions.append(levels, up, down, duplicate, remove);
     tr.append(titleCell, typeCell, qtyCell, sectionsCell, rearCell, actions); body.append(tr);
   });
   table.append(body); list.append(table);
+}
+
+function renderLevelModalRows() {
+  const list = $('#modal-level-list'); list.replaceChildren();
+  const table = document.createElement('table'); table.className = 'data-table modal-level-table';
+  table.innerHTML = '<thead><tr><th>Poziom</th><th>Światło</th><th>Ładunek</th><th>Wypełnienie</th></tr></thead>';
+  const body = document.createElement('tbody');
+  levelModalDraft.levelDetails.forEach((detail, index) => {
+    const row = document.createElement('tr');
+    const number = document.createElement('th'); number.scope = 'row'; number.textContent = String(index);
+    const inputCell = (key, step) => { const cell = document.createElement('td'); const unit = document.createElement('div'); unit.className = 'input-unit'; const input = document.createElement('input'); input.type = 'number'; input.min = '300'; input.max = '4000'; input.step = String(step); input.value = detail[key]; input.setAttribute('aria-label', `${key === 'clearHeight' ? 'Światło' : 'Ładunek'}, poziom ${index}`); input.addEventListener('change', () => { const value = numberValue(input.value, 300, 4000); detail[key] = key === 'clearHeight' ? Math.round(value / LEVEL_STEP) * LEVEL_STEP : value; input.value = detail[key]; }); const suffix = document.createElement('b'); suffix.textContent = 'mm'; unit.append(input, suffix); cell.append(unit); return cell; };
+    const clear = inputCell('clearHeight', LEVEL_STEP); const load = inputCell('loadHeight', 10);
+    const decking = document.createElement('td');
+    if (index === 0) decking.textContent = 'Posadzka';
+    else { const select = document.createElement('select'); [['none','Brak'],['mesh','Panel siatkowy'],['grate','Krata'],['bars','Poprzeczki'],['board','Płyta wiórowa']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; select.append(option); }); select.value = detail.decking; select.addEventListener('change', () => { detail.decking = select.value; }); decking.append(select); }
+    row.append(number, clear, load, decking); body.append(row);
+  });
+  table.append(body); list.append(table);
+}
+
+function openLevelModal(rackId) {
+  const rack = state.racks.find(item => item.id === rackId); if (!rack) return;
+  levelModalRackId = rackId;
+  levelModalDraft = { levels:rack.levels, levelDetails:rack.levelDetails.map(detail => ({...detail})) };
+  $('#level-modal-title').textContent = `Poziomy · ${rackGroupName(state.racks.findIndex(item => item.id === rackId), rack.type)}`;
+  $('#modal-level-count').value = levelModalDraft.levels;
+  renderLevelModalRows();
+  $('#level-modal').showModal();
 }
 
 function numberValue(value, min, max) { const parsed = Number(value); return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : min; }
@@ -248,8 +287,8 @@ function drawFront(result, rowOverride, svgOverride) {
   const sum = lengths.reduce((a,b) => a+b, 0) + (sections.length+1)*100;
   const scale = totalWidth / sum;
   const post = Math.max(3, 100*scale);
-  const heightScale = 155 / result.rackHeight;
-  const topY = baseY - result.rackHeight*heightScale;
+  const heightScale = 155 / row.rackHeight;
+  const topY = baseY - row.rackHeight*heightScale;
   let x = baseX;
   if (row.rearProtection === 'mesh') {
     addSvg(svg,'rect',{x:baseX+post,y:topY+5,width:totalWidth-2*post,height:baseY-topY-10,fill:'#7f898c','fill-opacity':.16,stroke:'#737d80','stroke-width':1,class:'rear-mesh-front'});
@@ -265,7 +304,7 @@ function drawFront(result, rowOverride, svgOverride) {
     drawPost(x);
     const usableX = x + post;
     const beamW = lengths[i]*scale;
-    result.levelsData.forEach(level => {
+    row.levelsData.forEach(level => {
       const beamThickness = Math.max(3,BEAM_HEIGHT*heightScale);
       const y = baseY - level.supportElevation*heightScale;
       if (!level.isFloor && section.length) addSvg(svg,'rect',{x:usableX,y,width:beamW,height:beamThickness,fill:COLORS.beam,class:'beam-front'});
@@ -291,10 +330,10 @@ function drawFront(result, rowOverride, svgOverride) {
   if (state.protection === 'barrier') addSvg(svg,'line',{x1:baseX,y1:baseY-7,x2:x+post,y2:baseY-7,stroke:COLORS.guard,'stroke-width':5,class:'barrier-front'});
   addSvg(svg,'line',{x1:baseX-12,y1:baseY+1,x2:x+post+12,y2:baseY+1,stroke:'#698077','stroke-width':2});
   addSvg(svg,'text',{x:baseX,y:24,fill:'#3d575c','font-size':10,'font-family':'DM Sans','font-weight':700},`RZĄD ${result.rows.findIndex(r=>(r.sourceId ?? r.id)===(row.sourceId ?? row.id))+1} / ${row.type==='double'?'REGAŁ PODWÓJNY':'REGAŁ POJEDYNCZY'}`);
-  addSvg(svg,'text',{x:720,y:24,'text-anchor':'end',fill:'#83938f','font-size':9,'font-family':'DM Sans'},`${state.levels} ${countWord(state.levels,'POZIOM','POZIOMY','POZIOMÓW')} · ${row.sections.length} ${countWord(row.sections.length,'SEKCJA','SEKCJE','SEKCJI')}`);
+  addSvg(svg,'text',{x:720,y:24,'text-anchor':'end',fill:'#83938f','font-size':9,'font-family':'DM Sans'},`${row.levelsData.length} ${countWord(row.levelsData.length,'POZIOM','POZIOMY','POZIOMÓW')} · ${row.sections.length} ${countWord(row.sections.length,'SEKCJA','SEKCJE','SEKCJI')}`);
   addSvg(svg,'text',{x:baseX,y:42,fill:'#7d918e','font-size':9,'font-family':'DM Sans'},'SŁUPY: 85 / 100 / 120 mm');
   if(row.type==='double') addSvg(svg,'text',{x:720,y:42,'text-anchor':'end',fill:'#7d918e','font-size':9,'font-family':'DM Sans'},'DRUGA STRONA ZA WIDOKIEM');
-  svg.setAttribute('aria-label',`Rysunek rzędu ${result.rows.findIndex(r=>(r.sourceId ?? r.id)===(row.sourceId ?? row.id))+1}: ${row.sections.length} ${countWord(row.sections.length,'sekcja','sekcje','sekcji')}, ${state.levels} ${countWord(state.levels,'poziom','poziomy','poziomów')}, wysokość ${result.rackHeight} mm, słupy 85, 100 lub 120 mm`);
+  svg.setAttribute('aria-label',`Rysunek rzędu ${result.rows.findIndex(r=>(r.sourceId ?? r.id)===(row.sourceId ?? row.id))+1}: ${row.sections.length} ${countWord(row.sections.length,'sekcja','sekcje','sekcji')}, ${row.levelsData.length} ${countWord(row.levelsData.length,'poziom','poziomy','poziomów')}, wysokość ${row.rackHeight} mm, słupy 85, 100 lub 120 mm`);
 }
 
 function printText(label, value) {
@@ -333,11 +372,11 @@ function renderPrintSheets(result) {
       const specs = document.createElement('dl'); specs.className = 'print-specs';
       specs.append(
         printText('Paleta / ładunek', `${format(state.palletWidth)} × ${format(state.palletDepth)} × ${format(state.palletHeight)}`),
-        printText('Wysokość regału', format(result.rackHeight)),
+        printText('Wysokość regału', format(row.rackHeight)),
         printText('Rama', `${format(result.frameDepth)} głębokości · ${format(result.frameExtension)} ponad ostatnim poziomem`),
         printText('Słupy / belki', '85 / 100 / 120 mm · belka 150 mm'),
         printText('Sekcje', row.sections.map(section => `${format(section.length ?? section.needed)} / ${section.positions} pal.`).join(' · ')),
-        printText('Wypełnienie', [...new Set(result.levelsData.filter(level => !level.isFloor).map(level => deckingNames[level.decking] ?? deckingNames.none))].join(' / ') || 'Brak'),
+        printText('Wypełnienie', [...new Set(row.levelsData.filter(level => !level.isFloor).map(level => deckingNames[level.decking] ?? deckingNames.none))].join(' / ') || 'Brak'),
         printText('Zabezpieczenia', `${protectionNames[state.protection]} · tył: ${rearNames[row.rearProtection] ?? rearNames.none}`)
       );
       if (row.type === 'double') specs.append(printText('Odstęp między rzędami', `${format(row.loadGap)} między ładunkami · ${format(row.frameGap)} między ramami`));
@@ -346,7 +385,7 @@ function renderPrintSheets(result) {
       const levelTable = document.createElement('table'); levelTable.className = 'print-level-table';
       levelTable.innerHTML = '<thead><tr><th>Poziom</th><th>Ładunek</th><th>Światło</th><th>Belka</th><th>Wypełnienie</th></tr></thead>';
       const levelBody = document.createElement('tbody');
-      result.levelsData.forEach((level, levelIndex) => {
+      row.levelsData.forEach((level, levelIndex) => {
         const tr = document.createElement('tr');
         [String(levelIndex), format(level.loadHeight), format(level.effectiveClear), level.isFloor ? 'Posadzka' : format(level.beamElevation), level.isFloor ? 'Posadzka' : deckingNames[level.decking] ?? deckingNames.none].forEach(value => { const cell = document.createElement('td'); cell.textContent = value; tr.append(cell); });
         levelBody.append(tr);
@@ -432,7 +471,7 @@ function render() {
   renderPalletPreview();
   document.querySelectorAll('[data-standard]').forEach(button => button.classList.toggle('active', button.dataset.standard === state.standard));
   $('#clearance-note').textContent = `Założony minimalny luz boczny i między paletami: ${CLEARANCE[state.standard]} mm. Dobór z długości ${state.standard === 'standard' ? '1000 / 1900 / 2700 / 3600' : '1000 / 1900 / 2850 / 3800'} mm.`;
-  renderLevelCards(result); renderRackTable(result); renderDrawing(result); renderPrintSheets(result);
+  renderRackTable(result); renderDrawing(result); renderPrintSheets(result);
   $('#total-length').textContent = result.valid ? formatRange(result.longestMin, result.longestMax) : 'Brak doboru';
   $('#aisle').textContent = format(result.aisle);
   $('#aisle-note').textContent = `${TRUCKS[state.truck].label}, orientacyjnie`;
@@ -446,7 +485,7 @@ function render() {
   const depth = document.createElement('div'); depth.className = 'beam-result-row'; depth.innerHTML = `<span>Głębokość układu z korytarzami</span><strong>${format(result.overallDepth)}</strong>`; beamResults.append(depth);
   const deckingNames = {none:'Brak wypełnienia',mesh:'Panel siatkowy',grate:'Krata',bars:'Poprzeczki',board:'Płyta wiórowa'};
   const protectionNames = {none:'brak osłon',barrier:'odbojnica',polymer:'odbojnica z tworzywa'};
-  const deckingSummary = [...new Set(result.levelsData.map(level => deckingNames[level.decking] ?? deckingNames.none))].join(' / ');
+  const deckingSummary = [...new Set(result.rows.flatMap(row => row.levelsData.map(level => deckingNames[level.decking] ?? deckingNames.none)))].join(' / ');
   const rearSummary = [...new Set(result.rows.map(row => row.rearProtection).map(value => value === 'mesh' ? 'wygrodzenie siatkowe' : value === 'backstops' ? 'backstopy' : 'brak'))].join(' / ');
   const equipment = document.createElement('div'); equipment.className = 'beam-result-row'; const equipmentLabel = document.createElement('span'); equipmentLabel.textContent = 'Wypełnienie / ochrona'; const equipmentValue = document.createElement('strong'); equipmentValue.textContent = `${deckingSummary} / ${protectionNames[state.protection]} / tył: ${rearSummary}`; equipment.append(equipmentLabel,equipmentValue); beamResults.append(equipment);
   $('#post-guard-legend').hidden = state.protection === 'none';
@@ -468,7 +507,7 @@ function render() {
 }
 
 syncInputs();
-document.querySelectorAll('#pallet-width,#pallet-depth,#pallet-height,#levels,#truck,#decking,#protection,#rear-protection').forEach(input => input.addEventListener('input', event => updateFromInputs(event)));
+document.querySelectorAll('#pallet-width,#pallet-depth,#pallet-height,#truck,#decking,#protection,#rear-protection').forEach(input => input.addEventListener('input', event => updateFromInputs(event)));
 $('#frame-depth').addEventListener('change', () => { state.frameDepth = number('#frame-depth', 100, 3000); render(); });
 $('#frame-depth-auto').addEventListener('click', () => { state.frameDepth = null; render(); });
 $('#frame-extension').addEventListener('change', () => { const extension = number('#frame-extension', currentResult.requiredFrameExtension, 5000); state.frameExtension = Math.max(currentResult.requiredFrameExtension, Math.round(extension / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP); render(); });
@@ -482,7 +521,22 @@ $('#expand-3d').addEventListener('click', () => { const expanded = $('#drawing-w
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && $('#drawing-wrap').classList.contains('expanded')) { $('#drawing-wrap').classList.remove('expanded'); $('#expand-3d').textContent = 'Powiększ'; scene3d?.resize(); } });
 $('#add-single').addEventListener('click', () => addRack('single', numberValue($('#single-quantity').value, 1, 50)));
 $('#add-double').addEventListener('click', () => addRack('double', numberValue($('#double-quantity').value, 1, 50)));
-function addRack(type, quantity = 1) { const id = nextRackId(); state.racks.push({id,type,quantity:numberValue(quantity, 1, 50),rearProtection:state.rearProtection,sections:[2]}); selectedRack = id; render(); }
+function addRack(type, quantity = 1) { const id = nextRackId(), levels = 3; state.racks.push({id,type,quantity:numberValue(quantity, 1, 50),rearProtection:state.rearProtection,sections:[2],levels,levelDetails:defaultLevelDetails(state.palletHeight, levels, state.decking)}); selectedRack = id; render(); }
+$('#modal-level-count').addEventListener('change', () => {
+  if (!levelModalDraft) return;
+  const count = numberValue($('#modal-level-count').value, 1, 8);
+  while (levelModalDraft.levelDetails.length < count) levelModalDraft.levelDetails.push({clearHeight:state.palletHeight + VERTICAL_CLEARANCE,loadHeight:state.palletHeight,decking:state.decking});
+  levelModalDraft.levelDetails.length = count;
+  levelModalDraft.levelDetails.forEach((detail, index) => { if (index === 0) detail.decking = 'none'; });
+  levelModalDraft.levels = count; $('#modal-level-count').value = count; renderLevelModalRows();
+});
+$('#level-modal-close').addEventListener('click', () => $('#level-modal').close());
+$('#level-modal-cancel').addEventListener('click', () => $('#level-modal').close());
+$('#level-modal-save').addEventListener('click', () => {
+  const rack = state.racks.find(item => item.id === levelModalRackId);
+  if (rack && levelModalDraft) { rack.levels = levelModalDraft.levels; rack.levelDetails = levelModalDraft.levelDetails.map(detail => ({...detail})); selectedRack = rack.id; render(); }
+  $('#level-modal').close();
+});
 $('#reset-button').addEventListener('click', () => { Object.assign(state, defaultState()); selectedRack = state.racks[0].id; viewMode = 'plan'; syncInputs(); render(); });
 $('#print-button').addEventListener('click', () => window.print());
 render();
