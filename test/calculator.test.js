@@ -148,9 +148,25 @@ test('wypełnienie poziomów i zabezpieczenie tyłu są niezależne dla konfigur
   assert.equal(result.rows[0].rearProjection, 0);
   assert.equal(result.rows[1].rearProjection, 0);
   assert.equal(result.rows[1].frameGap, 250);
-  assert.match(result.warnings.join(' '), /poziomach: 1/);
+  assert.match(result.warnings.join(' '), /obecnie wybrano brak wypełnienia/);
   const projected = calculate({palletWidth:800,palletDepth:1200,palletHeight:1400,levels:1,standard:'standard',truck:'reach',frameDepth:1100,racks:[{id:3,type:'single',sections:[2],rearProtection:'mesh'}]});
   assert.equal(projected.rows[0].rearProjection, 50);
   const projectedBackstop = calculate({palletWidth:800,palletDepth:1200,palletHeight:1400,levels:1,standard:'standard',truck:'reach',frameDepth:1100,racks:[{id:4,type:'single',sections:[2],rearProtection:'backstops'}]});
   assert.equal(projectedBackstop.rows[0].rearProjection, 50);
+});
+
+test('każdy regał może mieć własną liczbę i wysokości poziomów', () => {
+  const result = calculate({
+    palletWidth:800, palletDepth:1200, palletHeight:1400, levels:3,
+    standard:'standard', truck:'reach',
+    racks:[
+      {id:1,type:'single',sections:[2],levels:2,levelDetails:[{clearHeight:1500,loadHeight:1400},{clearHeight:1700,loadHeight:1550,decking:'bars'}]},
+      {id:2,type:'double',sections:[2],levels:4,levelDetails:Array.from({length:4}, () => ({clearHeight:1500,loadHeight:1400,decking:'mesh'}))}
+    ]
+  });
+  assert.deepEqual(result.rows.map(row => row.levelsData.length), [2,4]);
+  assert.deepEqual(result.rows.map(row => row.rackHeight), [3650, 6750]);
+  assert.equal(result.rows[0].spots, 4);
+  assert.equal(result.rows[1].spots, 16);
+  assert.equal(result.rackHeight, 6750);
 });
