@@ -110,3 +110,29 @@ test('ilość identycznych regałów rozwija się w planie bez powielania konfig
   assert.equal(result.spots, 12);
   assert.equal(result.layoutRows.length, 3);
 });
+
+test('wypełnienie poziomów i zabezpieczenie tyłu są niezależne dla konfiguracji regałów', () => {
+  const result = calculate({
+    palletWidth: 800,
+    palletDepth: 1200,
+    palletHeight: 1400,
+    levels: 2,
+    standard: 'standard',
+    truck: 'reach',
+    frameDepth: 1300,
+    decking: 'none',
+    rearProtection: 'none',
+    levelDetails: [
+      { clearHeight: 1500, loadHeight: 1400, decking: 'bars' },
+      { clearHeight: 1500, loadHeight: 1400, decking: 'none' }
+    ],
+    racks: [
+      { id: 1, type: 'single', sections: [2], rearProtection: 'mesh' },
+      { id: 2, type: 'double', sections: [2], rearProtection: 'backstops' }
+    ]
+  });
+  assert.deepEqual(result.levelsData.map(level => level.decking), ['bars', 'none']);
+  assert.deepEqual(result.rows.map(row => row.rearProtection), ['mesh', 'backstops']);
+  assert.equal(result.rows[1].frameGap, 250);
+  assert.match(result.warnings.join(' '), /poziomach: 2/);
+});
