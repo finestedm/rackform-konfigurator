@@ -19,7 +19,7 @@ Statyczny konfigurator do wstępnego planowania regałów paletowych. Działa be
 
 Luz boczny i między paletami wynosi orientacyjnie 75 mm w trybie standardowym oraz 100 mm w trybie NFPA 13. Dobierany jest pierwszy trawers z odpowiedniego zestawu, który pomieści wskazaną liczbę palet i wymagane luzy. Wysokość trawersu wynosi 150 mm. Do widoku przyjęto słup 100 mm, a długość rzędu jest pokazywana jako przedział dla profili 85–120 mm.
 
-Domyślna głębokość ramy jest o 100 mm mniejsza niż głębokość ładunku; można ją zmienić ręcznie i przywrócić dobór automatyczny. Gdy głębokość ramy jest mniejsza lub równa głębokości ładunku, konfigurator wskazuje konieczność odpowiedniego wypełnienia poziomów, np. poprzeczek lub kraty. Wysokość ramy jest dobierana co 250 mm i można ją zwiększyć ręcznie. Minimalna wysokość mieści poziomy, ładunki i zapas 300 mm ponad światłem najwyższego poziomu.
+Domyślna głębokość ramy jest o 100 mm mniejsza niż głębokość ładunku; można ją zmienić ręcznie i przywrócić dobór automatyczny. Gdy głębokość ramy jest równa lub większa od głębokości ładunku, konfigurator wskazuje konieczność odpowiedniego wypełnienia poziomów, np. poprzeczek lub kraty. Wysokość ramy jest dobierana co 250 mm i można ją zwiększyć ręcznie. Minimalna wysokość mieści poziomy, ładunki i zapas 300 mm ponad światłem najwyższego poziomu.
 
 W podwójnym rzędzie minimalna przerwa między ładunkami wynosi 100 mm, a między ramami 200 mm. NFPA 13 lub backstopy zwiększają oba minima o 50 mm, naliczane tylko raz, również gdy wybrane są oba ustawienia. Jeśli ręcznie zmieniona głębokość ramy tego wymaga, przerwa między ramami jest powiększana, aby zachować odstęp między ładunkami. Wynik i plan pokazują oba wymiary.
 
