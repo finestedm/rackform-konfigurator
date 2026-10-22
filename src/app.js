@@ -301,6 +301,10 @@ function render() {
   const rearNames = {none:'Brak',mesh:'Wygrodzenie siatkowe pleców',backstops:'Backstopy'};
   const selectedResultRow = result.rows.find(row => (row.sourceId ?? row.id) === selectedRack) ?? result.rows[0];
   const rear = document.createElement('div'); rear.className = 'beam-result-row'; const rearLabel = document.createElement('span'); rearLabel.textContent = 'Zabezpieczenie tyłu'; const rearValue = document.createElement('strong'); rearValue.textContent = rearSummary; rear.append(rearLabel,rearValue); beamResults.append(rear);
+  if (result.rows.some(row => row.rearProtection !== 'none')) {
+    const projection = Math.max(...result.rows.filter(row => row.rearProtection !== 'none').map(row => row.rearProjection ?? 0));
+    const rearDistance = document.createElement('div'); rearDistance.className = 'beam-result-row'; const distanceLabel = document.createElement('span'); distanceLabel.textContent = 'Odsunięcie zabezpieczenia od ramy'; const distanceValue = document.createElement('strong'); distanceValue.textContent = `${format(projection)} · różnica głębokości / 2`; rearDistance.append(distanceLabel, distanceValue); beamResults.append(rearDistance);
+  }
   $('#rear-legend').hidden = !result.rows.some(row => row.rearProtection !== 'none');
   $('#rear-legend').dataset.type = selectedResultRow?.rearProtection ?? 'none';
   $('#rear-legend-label').textContent = selectedResultRow?.rearProtection ? rearNames[selectedResultRow.rearProtection] : 'Zabezpieczenie tyłu';

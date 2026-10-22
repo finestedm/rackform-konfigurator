@@ -245,7 +245,10 @@ function create(container, onAddSection) {
             }
           });
         });
-        const rear = row.type === 'single' ? back : laneIndex === 0 ? back : front;
+        // The load is centered in the frame. Move the rear protection beyond
+        // the frame edge by the load overhang so it cannot intersect cargo.
+        const rearProjection = M(row.rearProjection ?? Math.max(0, (config.palletDepth - result.frameDepth) / 2));
+        const rear = row.type === 'single' ? back + rearProjection : laneIndex === 0 ? back + rearProjection : front - rearProjection;
         const rearProtection = row.rearProtection ?? config.rearProtection ?? 'none';
         if (rearProtection === 'mesh') {
           box(length / 2, height / 2, rear, length, height, 0.016, materials.rearMesh);

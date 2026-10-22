@@ -65,6 +65,9 @@ function calculate(config) {
   const defaultExtraGap = standard === 'nfpa' || config.rearProtection === 'backstops' ? 50 : 0;
   const defaultFrameGap = Math.max(200 + defaultExtraGap, 100 + defaultExtraGap + palletDepth - frameDepth);
   const defaultLoadGap = defaultFrameGap + frameDepth - palletDepth;
+  // Loads are centered in the frame. When a load is deeper than the frame,
+  // the rear protection must move by half of that difference to clear its edge.
+  const rearProjection = Math.max(0, (palletDepth - frameDepth) / 2);
   const rows = rackCopies.map(rack => {
     const rearProtection = rearProtectionForRack(config, rack);
     const extraGap = standard === 'nfpa' || rearProtection === 'backstops' ? 50 : 0;
@@ -78,7 +81,7 @@ function calculate(config) {
     const nominalLength = beamSum + (sections.length + 1) * POST_OPTIONS[1];
     const maxLength = beamSum + (sections.length + 1) * POST_OPTIONS[2];
     const depth = rack.type === 'double' ? frameDepth * 2 + frameGap + Math.max(0, palletDepth - frameDepth) : Math.max(frameDepth, palletDepth);
-    return { ...rack, rearProtection, decking: levelsData.map(level => level.decking), sections, beamSum, minLength, nominalLength, maxLength, depth, frameGap: rack.type === 'double' ? frameGap : null, loadGap: rack.type === 'double' ? loadGap : null, spots: sections.reduce((sum, s) => sum + s.positions, 0) * levels * (rack.type === 'double' ? 2 : 1) };
+    return { ...rack, rearProtection, decking: levelsData.map(level => level.decking), rearProjection, sections, beamSum, minLength, nominalLength, maxLength, depth, frameGap: rack.type === 'double' ? frameGap : null, loadGap: rack.type === 'double' ? loadGap : null, spots: sections.reduce((sum, s) => sum + s.positions, 0) * levels * (rack.type === 'double' ? 2 : 1) };
   });
   const valid = rows.every(row => row.sections.every(s => s.length));
   const longestMin = valid ? Math.max(...rows.map(row => row.minLength)) : null;
