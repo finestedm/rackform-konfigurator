@@ -4,7 +4,7 @@ Statyczny konfigurator do wstępnego planowania regałów paletowych. Działa be
 
 ## Funkcje
 
-- wymiary palety, liczba poziomów oraz osobne wysokości światła i ładunku na każdym poziomie; poziom 1 jest na posadzce;
+- wymiary palety z izometrycznym szkicem, liczba poziomów oraz osobne wysokości światła i ładunku na każdym poziomie; poziom 0 jest na posadzce;
 - automatyczny dobór głębokości i wysokości ramy z możliwością ręcznej zmiany;
 - dobór trawersu dla 1–4 palet w każdej sekcji;
 - zestawy 1000 / 1900 / 2700 / 3600 mm (standard) i 1000 / 1900 / 2850 / 3800 mm (NFPA 13);
@@ -19,13 +19,13 @@ Statyczny konfigurator do wstępnego planowania regałów paletowych. Działa be
 
 Luz boczny i między paletami wynosi orientacyjnie 75 mm w trybie standardowym oraz 100 mm w trybie NFPA 13. Dobierany jest pierwszy trawers z odpowiedniego zestawu, który pomieści wskazaną liczbę palet i wymagane luzy. Wysokość trawersu wynosi 150 mm. Do widoku przyjęto słup 100 mm, a długość rzędu jest pokazywana jako przedział dla profili 85–120 mm.
 
-Domyślna głębokość ramy jest o 100 mm mniejsza niż głębokość ładunku; można ją zmienić ręcznie i przywrócić dobór automatyczny. Gdy głębokość ramy jest równa lub większa od głębokości ładunku, konfigurator wskazuje konieczność odpowiedniego wypełnienia poziomów, np. poprzeczek lub kraty. Wysokość ramy jest dobierana co 250 mm i można ją zwiększyć ręcznie. Minimalna wysokość mieści poziomy, ładunki i zapas 300 mm ponad światłem najwyższego poziomu.
+Domyślna zewnętrzna głębokość ramy jest o 100 mm mniejsza niż głębokość ładunku; można ją zmienić ręcznie i przywrócić dobór automatyczny. Gdy głębokość ramy jest równa lub większa od głębokości ładunku, konfigurator wskazuje konieczność odpowiedniego wypełnienia poziomów belkowych, np. poprzeczek lub kraty. Zamiast całkowitej wysokości ramy podawane jest jej przedłużenie powyżej ostatniego poziomu, dobierane co 250 mm; domyślny zapas wynosi 300 mm.
 
 W podwójnym rzędzie minimalna przerwa między ładunkami wynosi 100 mm, a między ramami 200 mm. NFPA 13 lub backstopy zwiększają oba minima o 50 mm, naliczane tylko raz, również gdy wybrane są oba ustawienia. Jeśli ręcznie zmieniona głębokość ramy tego wymaga, przerwa między ramami jest powiększana, aby zachować odstęp między ładunkami. Wynik i plan pokazują oba wymiary.
 
 Orientacyjne szerokości korytarza: wózek czołowy 3500 mm, reach truck 2800 mm, VNA 1800 mm. Docelowy wymiar zależy od konkretnego modelu wózka i ładunku. Konfigurator nie oblicza nośności ani zgodności z przepisami; wymaga to projektu technicznego. Wariant NFPA 13 oznacza odrębny zestaw długości i przyjęty luz, a nie potwierdzenie zgodności instalacji z NFPA 13.
 
-Każdy poziom ma edytowalne światło i wysokość ładunku. Światło przyjęte do obliczeń wynosi co najmniej wysokość ładunku + 100 mm i jest zaokrąglane w górę do skoku 50 mm; gdy pole użytkownika jest mniejsze, pojawia się ostrzeżenie. Pierwsza paleta stoi na posadzce, a pierwsza belka jest nad nią, na wysokości światła poziomu 1. Każda kolejna belka znajduje się nad poprzednim poziomem o przyjęte światło; paleta stoi na górnej powierzchni belki o wysokości 150 mm. Wysokość ramy jest zaokrąglana w górę do 250 mm. Widok frontowy i 3D pokazują różnice między poziomami i wysokościami ładunków.
+Każdy poziom ma edytowalne światło i wysokość ładunku. Światło przyjęte do obliczeń wynosi co najmniej wysokość ładunku + 100 mm i jest zaokrąglane w górę do skoku 50 mm; gdy pole użytkownika jest mniejsze, pojawia się ostrzeżenie. Poziom 0 oznacza paletę na posadzce, a pierwsza belka jest nad nim. Każda kolejna belka znajduje się nad poprzednim poziomem o przyjęte światło; paleta stoi na górnej powierzchni belki o wysokości 150 mm. Widok frontowy i 3D pokazują różnice między poziomami i wysokościami ładunków.
 
 Plan umieszcza korytarz przed każdym rzędem, a także za ostatnim rzędem, jeśli jest podwójny. Pokazywana głębokość układu obejmuje te korytarze. Plan i widok 3D są poglądowe; korytarze oraz model wymagają doprecyzowania dla konkretnej hali i wózka.
 

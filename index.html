@@ -33,6 +33,7 @@
             <label class="field"><span>Głębokość palety</span><div class="input-unit"><input id="pallet-depth" type="number" min="400" max="2000" step="10" value="1200"><b>mm</b></div></label>
             <label class="field"><span>Domyślna wysokość ładunku</span><div class="input-unit"><input id="pallet-height" type="number" min="300" max="2500" step="10" value="1400"><b>mm</b></div></label>
           </div>
+          <div class="pallet-preview" aria-label="Izometryczny rysunek palety z wymiarami"><svg id="pallet-preview-svg" viewBox="0 0 420 190" role="img" aria-label="Paleta w rzucie izometrycznym"></svg></div>
           <div class="inline-control"><span>Tryb doboru</span><div class="segmented" role="group" aria-label="Tryb doboru"><button type="button" data-standard="standard" class="active">Standard</button><button type="button" data-standard="nfpa">NFPA 13</button></div></div>
           <p class="hint" id="clearance-note"></p>
         </section>
@@ -45,12 +46,12 @@
           </div>
           <div class="field-grid two frame-inputs">
             <div class="dimension-control"><label class="field" for="frame-depth"><span>Głębokość ramy</span><div class="input-unit"><input id="frame-depth" type="number" min="100" max="3000" step="10" value="1100"><b>mm</b></div></label><button type="button" class="dimension-auto" id="frame-depth-auto" hidden>Przywróć −100 mm</button></div>
-            <div class="dimension-control"><label class="field" for="frame-height"><span>Wysokość ramy</span><div class="input-unit"><input id="frame-height" type="number" min="250" max="50000" step="250" value="5250"><b>mm</b></div></label><button type="button" class="dimension-auto" id="frame-height-auto" hidden>Dobierz automatycznie</button></div>
+            <div class="dimension-control"><label class="field" for="frame-extension"><span>Przedłużenie ramy powyżej ostatniego poziomu</span><div class="input-unit"><input id="frame-extension" type="number" min="300" max="5000" step="250" value="300"><b>mm</b></div></label><button type="button" class="dimension-auto" id="frame-extension-auto" hidden>Dobierz automatycznie</button></div>
           </div>
-          <p class="hint frame-hint" id="frame-note">Domyślnie rama jest o 100 mm płytsza od ładunku. Wysokość ramy dobieramy co 250 mm.</p>
+          <p class="hint frame-hint" id="frame-note">Domyślnie rama zewnętrzna jest o 100 mm płytsza od ładunku. Przedłużenie nad ostatnim poziomem dobieramy co 250 mm.</p>
           <div class="level-heading"><strong>Wysokości poziomów</strong><span>pierwsza paleta stoi na posadzce</span></div>
           <div id="level-list" class="level-list"></div>
-          <p class="hint level-hint">Poziom 1 jest na posadzce, a pierwsza belka nad nim. Światło poziomu wynosi co najmniej wysokość ładunku + 100 mm. Belki można ustawiać co 50 mm.</p>
+          <p class="hint level-hint">Poziom 0 jest na posadzce, a pierwsza belka nad nim. Wypełnienie dotyczy tylko poziomów belkowych. Światło wynosi co najmniej wysokość ładunku + 100 mm. Belki można ustawiać co 50 mm.</p>
           <div class="section-list" id="rack-list"></div>
           <div class="add-actions">
             <div class="add-rack-control"><label class="field quantity-field"><span>Ilość</span><div class="input-unit"><input id="single-quantity" type="number" min="1" max="50" step="1" value="1" aria-label="Ilość regałów pojedynczych"><b>szt.</b></div></label><button type="button" class="add-button" id="add-single"><span>＋</span> Dodaj regał pojedynczy</button></div>
@@ -86,7 +87,7 @@
             <div class="metric"><span>DŁUGOŚĆ ZABUDOWY*</span><strong id="total-length">—</strong><small>najdłuższy rząd; profile 85 / 100 / 120 mm</small></div>
             <div class="metric"><span>KORYTARZ PRACY</span><strong id="aisle">—</strong><small id="aisle-note">wartość orientacyjna</small></div>
             <div class="metric"><span>MIEJSCA PALETOWE</span><strong id="pallet-spots">—</strong><small>wszystkie poziomy i strony</small></div>
-            <div class="metric"><span>WYSOKOŚĆ REGAŁU</span><strong id="rack-height">—</strong><small>szacunek do projektu wstępnego</small></div>
+            <div class="metric"><span>WYSOKOŚĆ CAŁKOWITA</span><strong id="rack-height">—</strong><small>poziomy + przedłużenie ramy</small></div>
           </div>
           <div id="beam-results" class="beam-results"></div>
           <div id="notices" class="notices" aria-live="polite"></div>
@@ -97,9 +98,9 @@
     </div>
   </main>
   <footer><span>RACKFORM / KONFIGURATOR WSTĘPNY</span><span>PRECYZJA ZACZYNA SIĘ OD PLANU.</span></footer>
-  <script defer src="./src/calculator.js?v=20261022-3"></script>
+  <script defer src="./src/calculator.js?v=20261022-4"></script>
   <script defer src="./src/visuals.js?v=20261022-2"></script>
   <script defer src="./src/scene3d.bundle.js?v=20261022-4"></script>
-  <script defer src="./src/app.js?v=20261022-3"></script>
+  <script defer src="./src/app.js?v=20261022-4"></script>
 </body>
 </html>
