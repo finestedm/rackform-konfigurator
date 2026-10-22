@@ -47,7 +47,8 @@ test('paleta na posadzce, wysokości ładunków i światła wyznaczają kolejne 
   assert.deepEqual(result.levelsData.map(level => level.effectiveClear), [1600,2400,1200]);
   assert.deepEqual(result.levelsData.map(level => level.loadTop), [1400,4050,5200]);
   assert.deepEqual(result.levelsData.map(level => level.index), [0,1,2]);
-  assert.equal(result.rackHeight, 5800);
+  assert.equal(result.rackHeight, 4600);
+  assert.ok(result.rackHeight < result.levelsData.at(-1).loadTop);
   assert.match(result.warnings.join(' '), /Poziom 1/);
 });
 
@@ -56,7 +57,7 @@ test('jeden poziom oznacza składowanie na posadzce bez belki', () => {
   assert.equal(result.levelsData[0].isFloor, true);
   assert.equal(result.levelsData[0].beamElevation, null);
   assert.equal(result.levelsData[0].loadTop, 1400);
-  assert.equal(result.rackHeight, 1800);
+  assert.equal(result.rackHeight, 300);
   assert.equal(result.spots, 2);
 });
 
@@ -68,9 +69,9 @@ test('światło ma co najmniej 100 mm luzu, a położenia belek skok 50 mm', () 
   ],standard:'standard',truck:'reach',decking:'bars',racks:[{id:1,type:'single',sections:[2]}]});
   assert.deepEqual(result.levelsData.map(level => level.effectiveClear), [1500,1550,1500]);
   assert.deepEqual(result.levelsData.map(level => level.beamElevation), [null,1500,3200]);
-  assert.equal(result.requiredFrameHeight, 5250);
+  assert.equal(result.requiredFrameHeight, 3750);
   assert.equal(result.frameExtension, 300);
-  assert.equal(result.rackHeight, 5150);
+  assert.equal(result.rackHeight, 3650);
 });
 
 test('ręczna głębokość ramy zachowuje minimalne odstępy ładunków i ram', () => {
@@ -165,8 +166,8 @@ test('każdy regał może mieć własną liczbę i wysokości poziomów', () => 
     ]
   });
   assert.deepEqual(result.rows.map(row => row.levelsData.length), [2,4]);
-  assert.deepEqual(result.rows.map(row => row.rackHeight), [3650, 6750]);
+  assert.deepEqual(result.rows.map(row => row.rackHeight), [1950, 5250]);
   assert.equal(result.rows[0].spots, 4);
   assert.equal(result.rows[1].spots, 16);
-  assert.equal(result.rackHeight, 6750);
+  assert.equal(result.rackHeight, 5250);
 });
