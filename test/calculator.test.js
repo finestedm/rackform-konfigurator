@@ -78,7 +78,7 @@ test('ręczna głębokość ramy zachowuje minimalne odstępy ładunków i ram',
   assert.equal(standard.rows[0].frameGap, 200);
   assert.equal(standard.rows[0].loadGap, 100);
   assert.equal(standard.rows[0].depth, 2500);
-  assert.match(standard.warnings.join(' '), /Wymagane jest wypełnienie/);
+  assert.doesNotMatch(standard.warnings.join(' '), /Wymagane jest wypełnienie/);
   const shallow = calculate({...base,standard:'standard',frameDepth:1000});
   assert.equal(shallow.rows[0].frameGap, 300);
   assert.equal(shallow.rows[0].loadGap, 100);
@@ -90,7 +90,8 @@ test('ręczna głębokość ramy zachowuje minimalne odstępy ładunków i ram',
   const deep = calculate({...base,standard:'standard',frameDepth:1300,decking:'none'});
   assert.equal(deep.rows[0].frameGap, 200);
   assert.equal(deep.rows[0].loadGap, 300);
-  assert.equal(deep.supportRequired, false);
+  assert.equal(deep.supportRequired, true);
+  assert.match(deep.warnings.join(' '), /jest równa lub większa/);
 });
 
 test('wysokość ramy dobierana jest co 250 mm i nie może być niższa od wymaganej', () => {
