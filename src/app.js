@@ -180,43 +180,76 @@ function renderRackCards(result) {
 
 function renderRackTable(result) {
   const list = $('#rack-list'); list.replaceChildren();
-  const table = document.createElement('table'); table.className = 'data-table rack-table';
-  table.innerHTML = '<thead><tr><th>Konfiguracja</th><th>Typ</th><th>Ilość regałów</th><th>Sekcje · długość / ilość</th><th>Tył</th><th>Akcje</th></tr></thead>';
-  const body = document.createElement('tbody');
+  const grid = document.createElement('div'); grid.className = 'rack-config-grid';
+  const gridHead = document.createElement('div'); gridHead.className = 'rack-config-grid-head';
+  gridHead.innerHTML = '<div><span>Konfiguracje regałów</span><small>Wybierz wiersz, aby edytować jego parametry.</small></div><strong></strong>';
+  gridHead.querySelector('strong').textContent = `${state.racks.length} ${countWord(state.racks.length, 'układ', 'układy', 'układów')}`;
+  grid.append(gridHead);
   state.racks.forEach((rack, groupIndex) => {
     const row = result.rows.find(candidate => candidate.sourceId === rack.id || candidate.id === rack.id);
     if (!row) return;
     const active = selectedRack === rack.id;
-    const tr = document.createElement('tr'); tr.className = active ? 'rack-table-row selected' : 'rack-table-row';
-    const titleCell = document.createElement('th'); titleCell.scope = 'row'; const title = document.createElement('button'); title.type = 'button'; title.className = 'rack-select'; title.textContent = `${String(groupIndex + 1).padStart(2,'0')} · ${row.type === 'double' ? 'Podwójny' : 'Pojedynczy'}`; title.setAttribute('aria-expanded', String(active)); title.addEventListener('click', () => { selectedRack = rack.id; render(); }); titleCell.append(title);
-    const typeCell = document.createElement('td');
-    const typeSelect = document.createElement('select'); typeSelect.setAttribute('aria-label', `Typ regału w konfiguracji ${groupIndex}`);
-    [['single','Pojedynczy'],['double','Podwójny']].forEach(([value, label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; typeSelect.append(option); });
-    typeSelect.value = rack.type; typeSelect.addEventListener('change', () => { rack.type = typeSelect.value; selectedRack = rack.id; render(); }); typeCell.append(typeSelect);
-    const qtyCell = document.createElement('td'); const qty = document.createElement('input'); qty.type = 'number'; qty.min = '1'; qty.max = '50'; qty.step = '1'; qty.value = rack.quantity; qty.setAttribute('aria-label', `Ilość regałów w konfiguracji ${groupIndex}`); qty.addEventListener('change', () => { rack.quantity = numberValue(qty.value, 1, 50); selectedRack = rack.id; render(); }); qtyCell.append(qty);
-    const sectionsCell = document.createElement('td'); sectionsCell.className = 'rack-sections-cell';
+    const card = document.createElement('article'); card.className = `rack-config-card${active ? ' selected' : ''}`;
+    const head = document.createElement('header'); head.className = 'rack-config-card-head';
+    const title = document.createElement('button'); title.type = 'button'; title.className = 'rack-config-title'; title.setAttribute('aria-expanded', String(active)); title.setAttribute('aria-label', `Pokaż konfigurację ${groupIndex + 1}`);
+    title.innerHTML = `<span class="rack-config-index">${String(groupIndex + 1).padStart(2, '0')}</span><span><strong>Regał ${row.type === 'double' ? 'podwójny' : 'pojedynczy'}</strong><small>${active ? 'Edytujesz tę konfigurację' : 'Kliknij, aby edytować'}</small></span>`;
+    title.addEventListener('click', () => { selectedRack = rack.id; render(); });
+    const headMeta = document.createElement('div'); headMeta.className = 'rack-config-head-meta';
+    if (active) { const badge = document.createElement('span'); badge.className = 'rack-active-badge'; badge.textContent = 'AKTYWNY'; headMeta.append(badge); }
+    const moveTools = document.createElement('div'); moveTools.className = 'rack-move-tools';
+    const up = document.createElement('button'); up.type = 'button'; up.className = 'icon-button'; up.textContent = '↑'; up.title = 'Przenieś wyżej'; up.setAttribute('aria-label', 'Przenieś konfigurację wyżej'); up.disabled = groupIndex === 0; up.addEventListener('click', () => moveRack(rack.id, -1));
+    const down = document.createElement('button'); down.type = 'button'; down.className = 'icon-button'; down.textContent = '↓'; down.title = 'Przenieś niżej'; down.setAttribute('aria-label', 'Przenieś konfigurację niżej'); down.disabled = groupIndex === state.racks.length - 1; down.addEventListener('click', () => moveRack(rack.id, 1));
+    moveTools.append(up, down); headMeta.append(moveTools); head.append(title, headMeta); card.append(head);
     const groups = sectionGroups(rack, row);
-    if (active) {
-      groups.forEach((group, groupSectionIndex) => {
+    if (!active) {
+      const summary = document.createElement('button'); summary.type = 'button'; summary.className = 'rack-config-summary'; summary.setAttribute('aria-label', `Edytuj konfigurację ${groupIndex + 1}`);
+      const values = [
+        row.type === 'double' ? 'Podwójny · 2 strony' : 'Pojedynczy · 1 strona',
+        `${rack.quantity} ${rack.quantity === 1 ? 'regał' : rack.quantity < 5 ? 'regały' : 'regałów'}`,
+        groups.map(group => `${group.count} × ${group.length} mm`).join(' · '),
+        `${row.levelsData.length} ${countWord(row.levelsData.length, 'poziom', 'poziomy', 'poziomów')}`,
+        ({ none: 'Bez zabezpieczenia tyłu', mesh: 'Siatka z tyłu', backstops: 'Backstopy' })[rack.rearProtection ?? state.rearProtection]
+      ];
+      values.forEach(value => { const chip = document.createElement('span'); chip.textContent = value; summary.append(chip); });
+      summary.addEventListener('click', () => { selectedRack = rack.id; render(); }); card.append(summary); grid.append(card); return;
+    }
+    const body = document.createElement('div'); body.className = 'rack-config-card-body';
+    const controls = document.createElement('div'); controls.className = 'rack-config-controls';
+    const typeField = document.createElement('label'); typeField.className = 'rack-compact-field'; typeField.innerHTML = '<span>Typ regału</span>';
+    const typeSelect = document.createElement('select'); typeSelect.setAttribute('aria-label', `Typ regału w konfiguracji ${groupIndex + 1}`);
+    [['single','Pojedynczy'],['double','Podwójny']].forEach(([value, label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; typeSelect.append(option); });
+    typeSelect.value = rack.type; typeSelect.addEventListener('change', () => { rack.type = typeSelect.value; selectedRack = rack.id; render(); }); typeField.append(typeSelect);
+    const quantityField = document.createElement('label'); quantityField.className = 'rack-compact-field'; quantityField.innerHTML = '<span>Ilość regałów</span>';
+    const quantityUnit = document.createElement('div'); quantityUnit.className = 'input-unit'; const qty = document.createElement('input'); qty.type = 'number'; qty.min = '1'; qty.max = '50'; qty.step = '1'; qty.value = rack.quantity; qty.setAttribute('aria-label', `Ilość regałów w konfiguracji ${groupIndex + 1}`); qty.addEventListener('change', () => { rack.quantity = numberValue(qty.value, 1, 50); selectedRack = rack.id; render(); }); const qtySuffix = document.createElement('b'); qtySuffix.textContent = 'szt.'; quantityUnit.append(qty, qtySuffix); quantityField.append(quantityUnit);
+    const rearField = document.createElement('label'); rearField.className = 'rack-compact-field'; rearField.innerHTML = '<span>Zabezpieczenie tyłu</span>';
+    const rear = document.createElement('select'); rear.setAttribute('aria-label', `Zabezpieczenie tyłu konfiguracji ${groupIndex + 1}`); [['none','Brak'],['mesh','Siatka'],['backstops','Backstopy']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; rear.append(option); }); rear.value = rack.rearProtection ?? state.rearProtection; rear.addEventListener('change', () => { rack.rearProtection = rear.value; selectedRack = rack.id; render(); }); rearField.append(rear);
+    controls.append(typeField, quantityField, rearField); body.append(controls);
+    const sectionsBox = document.createElement('section'); sectionsBox.className = 'rack-sections-editor';
+    const sectionsHead = document.createElement('div'); sectionsHead.className = 'rack-sections-editor-head'; sectionsHead.innerHTML = '<div><strong>Sekcje w rzędzie</strong><small>Dobierz długość trawersu i liczbę identycznych pól.</small></div>';
+    const add = document.createElement('button'); add.type = 'button'; add.className = 'small-add'; add.textContent = '＋ Dodaj grupę'; add.addEventListener('click', () => { groups.push({ length: beamCatalog().find(value => positionsForBeamLength(value) > 0) ?? beamCatalog()[0], count: 1 }); applySectionGroups(rack, groups); selectedRack = rack.id; render(); }); sectionsHead.append(add); sectionsBox.append(sectionsHead);
+    const sectionList = document.createElement('div'); sectionList.className = 'rack-section-groups';
+    groups.forEach((group, groupSectionIndex) => {
         const wrap = document.createElement('div'); wrap.className = 'rack-section-inline';
+        const groupLabel = document.createElement('span'); groupLabel.className = 'section-group-label'; groupLabel.textContent = `Grupa ${groupSectionIndex + 1}`;
         const length = document.createElement('select'); length.setAttribute('aria-label', `Długość trawersu grupy ${groupSectionIndex + 1}, konfiguracja ${groupIndex}`);
         beamCatalog().filter(value => positionsForBeamLength(value) > 0).forEach(value => { const option = document.createElement('option'); option.value = value; option.textContent = `${value} mm`; length.append(option); });
         length.value = group.length;
         const count = document.createElement('input'); count.type = 'number'; count.min = '1'; count.max = '50'; count.step = '1'; count.value = group.count; count.setAttribute('aria-label', `Ilość sekcji ${group.length} mm, konfiguracja ${groupIndex}`);
         const apply = () => { groups[groupSectionIndex].length = Number(length.value); groups[groupSectionIndex].count = numberValue(count.value, 1, 50); applySectionGroups(rack, groups); selectedRack = rack.id; render(); };
         length.addEventListener('change', apply); count.addEventListener('change', apply);
-        const info = document.createElement('small'); info.textContent = `${group.count} × ${group.length} mm`;
+        const info = document.createElement('small'); info.textContent = `${group.count * positionsForBeamLength(group.length)} miejsc / poziom`;
         const removeGroup = document.createElement('button'); removeGroup.type = 'button'; removeGroup.className = 'icon-button section-group-delete'; removeGroup.textContent = '×'; removeGroup.title = 'Usuń grupę sekcji'; removeGroup.setAttribute('aria-label', `Usuń grupę ${group.length} mm z konfiguracji ${groupIndex + 1}`); removeGroup.disabled = groups.length === 1;
         removeGroup.addEventListener('click', () => { groups.splice(groupSectionIndex, 1); applySectionGroups(rack, groups); selectedRack = rack.id; render(); });
-        wrap.append(length, count, info, removeGroup); sectionsCell.append(wrap);
+        wrap.append(groupLabel, length, count, info, removeGroup); sectionList.append(wrap);
       });
-      const add = document.createElement('button'); add.type = 'button'; add.className = 'small-add'; add.textContent = '＋ Grupa sekcji'; add.addEventListener('click', () => { groups.push({ length: beamCatalog().find(value => positionsForBeamLength(value) > 0) ?? beamCatalog()[0], count: 1 }); applySectionGroups(rack, groups); selectedRack = rack.id; render(); }); sectionsCell.append(add);
-    } else { sectionsCell.textContent = groups.map(group => `${group.length} mm: ${group.count} sekcji`).join(' · '); }
-    const rearCell = document.createElement('td'); const rear = document.createElement('select'); rear.setAttribute('aria-label', `Zabezpieczenie tyłu konfiguracji ${groupIndex}`); [['none','Brak'],['mesh','Siatka'],['backstops','Backstopy']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; rear.append(option); }); rear.value = rack.rearProtection ?? state.rearProtection; rear.addEventListener('change', () => { rack.rearProtection = rear.value; selectedRack = rack.id; render(); }); rearCell.append(rear);
-    const actions = document.createElement('td'); actions.className = 'rack-table-actions'; const levels = document.createElement('button'); levels.type = 'button'; levels.className = 'rack-action rack-levels-action'; levels.textContent = `Poziomy: ${row.levelsData.length}`; levels.title = 'Ustaw poziomy składowania'; levels.addEventListener('click', () => openLevelModal(rack.id)); const up = document.createElement('button'); up.type = 'button'; up.className = 'icon-button'; up.textContent = '↑'; up.title = 'Przenieś wyżej'; up.disabled = groupIndex === 0; up.addEventListener('click', () => moveRack(rack.id, -1)); const down = document.createElement('button'); down.type = 'button'; down.className = 'icon-button'; down.textContent = '↓'; down.title = 'Przenieś niżej'; down.disabled = groupIndex === state.racks.length - 1; down.addEventListener('click', () => moveRack(rack.id, 1)); const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.className = 'rack-action'; duplicate.textContent = 'Duplikuj'; duplicate.addEventListener('click', () => duplicateRack(rack.id)); const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.textContent = '×'; remove.title = 'Usuń konfigurację'; remove.disabled = state.racks.length === 1; remove.addEventListener('click', () => { state.racks = state.racks.filter(item => item.id !== rack.id); selectedRack = state.racks[0].id; render(); }); actions.append(levels, up, down, duplicate, remove);
-    tr.append(titleCell, typeCell, qtyCell, sectionsCell, rearCell, actions); body.append(tr);
+    sectionsBox.append(sectionList); body.append(sectionsBox);
+    const actions = document.createElement('footer'); actions.className = 'rack-config-actions';
+    const levels = document.createElement('button'); levels.type = 'button'; levels.className = 'rack-action rack-levels-action'; levels.textContent = `Poziomy: ${row.levelsData.length}`; levels.title = 'Ustaw poziomy składowania'; levels.addEventListener('click', () => openLevelModal(rack.id));
+    const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.className = 'rack-action'; duplicate.textContent = 'Duplikuj'; duplicate.addEventListener('click', () => duplicateRack(rack.id));
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'rack-action rack-remove-action'; remove.textContent = 'Usuń'; remove.title = 'Usuń konfigurację'; remove.disabled = state.racks.length === 1; remove.addEventListener('click', () => { state.racks = state.racks.filter(item => item.id !== rack.id); selectedRack = state.racks[0].id; render(); });
+    actions.append(levels, duplicate, remove); body.append(actions); card.append(body); grid.append(card);
   });
-  table.append(body); list.append(table);
+  list.append(grid);
 }
 
 function renderLevelModalRows() {
