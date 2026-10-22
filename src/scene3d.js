@@ -68,6 +68,8 @@ function create(container, onAddSection) {
     guardRim: new THREE.MeshStandardMaterial({ color: '#a67e00', roughness: 0.62 }),
     mesh: new THREE.MeshStandardMaterial({ color: '#6dada8', transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }),
     meshFrame: new THREE.MeshStandardMaterial({ color: '#368a87', metalness: 0.35, roughness: 0.55 }),
+    rearMesh: new THREE.MeshStandardMaterial({ color: '#8b9598', transparent: true, opacity: 0.24, side: THREE.DoubleSide, depthWrite: false }),
+    rearMeshFrame: new THREE.MeshStandardMaterial({ color: '#687477', metalness: 0.35, roughness: 0.62 }),
     grate: new THREE.MeshStandardMaterial({ color: '#82999b', metalness: 0.65, roughness: 0.4 }),
     board: new THREE.MeshStandardMaterial({ color: '#c2aa85', roughness: 0.88 })
   };
@@ -229,7 +231,7 @@ function create(container, onAddSection) {
               const beamMaterial = section.length ? materials.beam : materials.invalidBeam;
               box((x1 + x2) / 2, beamY, front, x2 - x1, 0.15, 0.085, beamMaterial, true);
               box((x1 + x2) / 2, beamY, back, x2 - x1, 0.15, 0.085, beamMaterial, true);
-              decking(config.decking, x1, x2, front, back, M(level.supportElevation));
+              decking(level.decking ?? config.decking, x1, x2, front, back, M(level.supportElevation));
             }
             if (!section.length) return;
             const palletWidth = M(config.palletWidth);
@@ -244,11 +246,13 @@ function create(container, onAddSection) {
           });
         });
         const rear = row.type === 'single' ? back : laneIndex === 0 ? back : front;
-        if (config.rearProtection === 'mesh') {
-          box(length / 2, height / 2, rear, length, height, 0.016, materials.mesh);
-          for (const postX of xPosts) box(postX, height / 2, rear, 0.025, height, 0.025, materials.meshFrame);
-          for (let y = 0.5; y < height; y += 1.3) box(length / 2, y, rear, length, 0.025, 0.025, materials.meshFrame);
-        } else if (config.rearProtection === 'backstops') {
+        const rearProtection = row.rearProtection ?? config.rearProtection ?? 'none';
+        if (rearProtection === 'mesh') {
+          box(length / 2, height / 2, rear, length, height, 0.016, materials.rearMesh);
+          for (const postX of xPosts) box(postX, height / 2, rear, 0.025, height, 0.025, materials.rearMeshFrame);
+          for (let y = 0.5; y < height; y += 1.3) box(length / 2, y, rear, length, 0.025, 0.025, materials.rearMeshFrame);
+          for (let meshX = 0.35; meshX < length; meshX += 0.55) box(meshX, height / 2, rear, 0.018, height, 0.018, materials.rearMeshFrame);
+        } else if (rearProtection === 'backstops') {
           result.levelsData.forEach(level => box(length / 2, M(level.supportElevation) + 0.35, rear, length, 0.07, 0.08, materials.galva));
         }
         const aisleSide = laneIndex === 0 ? front : back;

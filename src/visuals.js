@@ -20,6 +20,13 @@ function drawPlan(svg, config, result, selectedId, onSelect, onAddSection) {
   const height = 78 + result.aisles.length * aisleHeight + rowHeights.reduce((a, b) => a + b, 0) + 63;
   svg.setAttribute('viewBox', `0 0 620 ${height}`);
   svg.setAttribute('aria-label', `Plan ${result.rows.length} regałów i ${result.aisles.length} korytarzy pracy o szerokości ${result.aisle} mm`);
+  const defs = element('defs');
+  const rearPattern = element('pattern', {id:'rear-mesh-grid',width:10,height:10,patternUnits:'userSpaceOnUse'});
+  rearPattern.append(
+    element('rect', {width:10, height:10, fill:'#7e898c', 'fill-opacity':0.28}),
+    element('path', {d:'M 0 0 L 10 0 M 0 0 L 0 10', stroke:'#596568', 'stroke-width':1, fill:'none'})
+  );
+  defs.append(rearPattern); svg.append(defs);
   const maxLength = Math.max(1, ...result.rows.map(row => row.nominalLength));
   add(svg, 'text', {x:x0,y:24,fill:'#49625f','font-size':13,'font-family':'DM Sans','font-weight':700}, 'RZUT Z GÓRY / WSZYSTKIE REGAŁY');
   add(svg, 'text', {x:575,y:24,'text-anchor':'end',fill:'#81938e','font-size':11,'font-family':'DM Sans'}, `${result.rows.length} ${result.rows.length===1?'RZĄD':result.rows.length<5?'RZĘDY':'RZĘDÓW'} · ${result.aisles.length} ${result.aisles.length===1?'KORYTARZ':result.aisles.length<5?'KORYTARZE':'KORYTARZY'}`);
@@ -61,9 +68,16 @@ function drawPlan(svg, config, result, selectedId, onSelect, onAddSection) {
       sectionX += sectionWidth;
       if (sectionIndex < row.sections.length-1) postXs.push(sectionX+2);
     });
-    if (config.rearProtection !== 'none') {
+    const rearProtection = row.rearProtection ?? config.rearProtection ?? 'none';
+    if (rearProtection !== 'none') {
       const rearLines = row.type === 'double' ? [y+rowHeight/2-4,y+rowHeight/2+4] : [y+rowHeight-4];
-      rearLines.forEach(rearY => add(svg, 'line', {x1:x0+5,y1:rearY,x2:x0+rackWidth-5,y2:rearY,stroke:config.rearProtection==='mesh'?'#4b9d9b':'#a66b3a','stroke-width':config.rearProtection==='mesh'?3:4,'stroke-dasharray':config.rearProtection==='mesh'?'2 2':'12 7',class:'rear-plan-line'}));
+      rearLines.forEach(rearY => {
+        if (rearProtection === 'mesh') {
+          add(svg, 'rect', {x:x0+5,y:rearY-6,width:Math.max(1,rackWidth-10),height:12,fill:'url(#rear-mesh-grid)',stroke:'#687477','stroke-width':1,class:'rear-plan-mesh'});
+        } else {
+          add(svg, 'line', {x1:x0+5,y1:rearY,x2:x0+rackWidth-5,y2:rearY,stroke:'#a66b3a','stroke-width':4,'stroke-dasharray':'12 7',class:'rear-plan-line'});
+        }
+      });
     }
     add(svg, 'line', {x1:x0+rackWidth-2,y1:y+5,x2:x0+rackWidth-2,y2:y+rowHeight-5,stroke:COLORS.post,'stroke-width':3,class:'post-plan'});
     if (config.protection === 'barrier') {

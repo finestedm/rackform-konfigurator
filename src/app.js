@@ -11,7 +11,7 @@ let scene3d = null;
 let currentResult;
 
 function defaultState() {
-  return { schemaVersion: 3, palletWidth: 800, palletDepth: 1200, palletHeight: 1400, frameDepth: null, frameHeight: null, levels: 3, levelDetails: Array.from({length:3}, () => ({clearHeight:1500,loadHeight:1400})), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', quantity: 1, sections: [3, 2] }] };
+  return { schemaVersion: 4, palletWidth: 800, palletDepth: 1200, palletHeight: 1400, frameDepth: null, frameHeight: null, levels: 3, levelDetails: Array.from({length:3}, () => ({clearHeight:1500,loadHeight:1400,decking:'none'})), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', quantity: 1, rearProtection: 'none', sections: [3, 2] }] };
 }
 function loadState() {
   try {
@@ -20,13 +20,15 @@ function loadState() {
       saved.levelDetails = Array.from({length:saved.levels}, (_, index) => saved.levelDetails?.[index] ?? {clearHeight:saved.palletHeight+VERTICAL_CLEARANCE,loadHeight:saved.palletHeight});
       if (!saved.schemaVersion) saved.levelDetails.forEach(detail => { if (detail.clearHeight === detail.loadHeight + 200) detail.clearHeight = detail.loadHeight + VERTICAL_CLEARANCE; });
       saved.racks = saved.racks.map(rack => ({ ...rack, quantity: Math.max(1, Math.min(50, Math.round(Number(rack.quantity) || 1))) }));
-      saved.schemaVersion = 3;
+      saved.schemaVersion = 4;
       saved.frameDepth = saved.frameDepth == null || !Number.isFinite(Number(saved.frameDepth)) ? null : Number(saved.frameDepth);
       saved.frameHeight = saved.frameHeight == null || !Number.isFinite(Number(saved.frameHeight)) ? null : Number(saved.frameHeight);
       if (['polymer-asafe','polymer-ampere'].includes(saved.protection)) saved.protection = 'polymer';
       saved.protection = ['none','barrier','polymer'].includes(saved.protection) ? saved.protection : 'none';
       saved.decking = ['none','mesh','grate','bars','board'].includes(saved.decking) ? saved.decking : 'none';
       saved.rearProtection = ['none','mesh','backstops'].includes(saved.rearProtection) ? saved.rearProtection : 'none';
+      saved.levelDetails = saved.levelDetails.map(detail => ({ ...detail, decking: ['none','mesh','grate','bars','board'].includes(detail.decking) ? detail.decking : saved.decking }));
+      saved.racks = saved.racks.map(rack => ({ ...rack, rearProtection: ['none','mesh','backstops'].includes(rack.rearProtection) ? rack.rearProtection : saved.rearProtection }));
       return saved;
     }
   } catch {}
@@ -47,7 +49,7 @@ function syncInputs() {
   $('#protection').value = state.protection;
   $('#rear-protection').value = state.rearProtection;
 }
-function updateFromInputs() {
+function updateFromInputs(event) {
   const previousHeight = state.palletHeight;
   state.palletWidth = number('#pallet-width', 400, 1800);
   state.palletDepth = number('#pallet-depth', 400, 2000);
@@ -63,6 +65,8 @@ function updateFromInputs() {
   state.decking = $('#decking').value;
   state.protection = $('#protection').value;
   state.rearProtection = $('#rear-protection').value;
+  if (event?.target?.id === 'decking') state.levelDetails.forEach(detail => { detail.decking = state.decking; });
+  if (event?.target?.id === 'rear-protection') state.racks.forEach(rack => { rack.rearProtection = state.rearProtection; });
   render();
 }
 function rowName(index, type) { return `Regał ${String(index + 1).padStart(2, '0')} · ${type === 'double' ? 'podwójny' : 'pojedynczy'}`; }
@@ -84,8 +88,15 @@ function renderLevelCards(result) {
     };
     const fields = document.createElement('div'); fields.className = 'level-fields';
     fields.append(createField('Światło poziomu', 'clearHeight', level.clearHeight), createField('Wysokość ładunku', 'loadHeight', level.loadHeight));
+    const deckingField = document.createElement('label'); deckingField.className = 'field level-decking-field';
+    const deckingCaption = document.createElement('span'); deckingCaption.textContent = 'Wypełnienie poziomu';
+    const deckingSelect = document.createElement('select'); deckingSelect.setAttribute('aria-label', `Wypełnienie poziomu ${index + 1}`);
+    [['none','Brak wypełnienia'],['mesh','Panel siatkowy'],['grate','Krata'],['bars','Poprzeczki'],['board','Płyta wiórowa']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; deckingSelect.append(option); });
+    deckingSelect.value = level.decking ?? state.levelDetails[index].decking ?? state.decking;
+    deckingSelect.addEventListener('change', () => { state.levelDetails[index].decking = deckingSelect.value; render(); });
+    deckingField.append(deckingCaption, deckingSelect);
     const computed = document.createElement('small'); computed.className = 'level-computed'; computed.textContent = level.isFloor ? `Paleta na posadzce · pierwsza belka nad nią na ${format(level.effectiveClear)}` : `Belka na ${format(level.beamElevation)} · przyjęte światło ${format(level.effectiveClear)}`;
-    card.append(name, fields, computed); list.append(card);
+    card.append(name, fields, deckingField, computed); list.append(card);
   });
 }
 
@@ -95,7 +106,7 @@ function nextRackId() { return Math.max(0, ...state.racks.map(rack => Number(rac
 function duplicateRack(id) {
   const source = state.racks.find(rack => rack.id === id);
   if (!source) return;
-  const copy = { ...source, id: nextRackId(), quantity: 1, sections: [...source.sections] };
+  const copy = { ...source, id: nextRackId(), quantity: 1, rearProtection: source.rearProtection ?? state.rearProtection, sections: [...source.sections] };
   state.racks.push(copy);
   selectedRack = copy.id;
   render();
@@ -135,6 +146,13 @@ function renderRackCards(result) {
     const quantityInput = document.createElement('input'); quantityInput.type = 'number'; quantityInput.min = '1'; quantityInput.max = '50'; quantityInput.step = '1'; quantityInput.value = rack.quantity; quantityInput.setAttribute('aria-label', `Ilość identycznych regałów w ${rackGroupName(groupIndex, row.type)}`);
     quantityInput.addEventListener('change', () => { rack.quantity = numberValue(quantityInput.value, 1, 50); selectedRack = rack.id; render(); });
     const quantitySuffix = document.createElement('b'); quantitySuffix.textContent = 'szt.'; quantityUnit.append(quantityInput, quantitySuffix); quantityField.append(quantityCaption, quantityUnit); body.append(quantityField);
+    const rearField = document.createElement('label'); rearField.className = 'field rack-rear-field';
+    const rearCaption = document.createElement('span'); rearCaption.textContent = 'Zabezpieczenie tyłu regału';
+    const rearSelect = document.createElement('select'); rearSelect.setAttribute('aria-label', `Zabezpieczenie tyłu ${rackGroupName(groupIndex, row.type)}`);
+    [['none','Brak'],['mesh','Wygrodzenie siatkowe pleców'],['backstops','Backstopy']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; rearSelect.append(option); });
+    rearSelect.value = rack.rearProtection ?? state.rearProtection;
+    rearSelect.addEventListener('change', () => { rack.rearProtection = rearSelect.value; selectedRack = rack.id; render(); });
+    rearField.append(rearCaption, rearSelect); body.append(rearField);
     const sections = document.createElement('div'); sections.className = 'rack-sections';
     rack.sections.forEach((positions, sectionIndex) => {
       const section = row.sections[sectionIndex];
@@ -173,6 +191,11 @@ function drawFront(result) {
   const heightScale = 155 / result.rackHeight;
   const topY = baseY - result.rackHeight*heightScale;
   let x = baseX;
+  if (row.rearProtection === 'mesh') {
+    addSvg(svg,'rect',{x:baseX+post,y:topY+5,width:totalWidth-2*post,height:baseY-topY-10,fill:'#7f898c','fill-opacity':.16,stroke:'#737d80','stroke-width':1,class:'rear-mesh-front'});
+    for (let gx=baseX+post+18;gx<baseX+totalWidth-post;gx+=22) addSvg(svg,'line',{x1:gx,y1:topY+5,x2:gx,y2:baseY-5,stroke:'#737d80','stroke-width':.7,'stroke-opacity':.62});
+    for (let gy=topY+17;gy<baseY-5;gy+=18) addSvg(svg,'line',{x1:baseX+post,y1:gy,x2:baseX+totalWidth-post,y2:gy,stroke:'#737d80','stroke-width':.7,'stroke-opacity':.62});
+  }
   const drawPost = xPos => {
     addSvg(svg,'rect',{x:xPos,y:topY,width:post,height:baseY-topY,fill:COLORS.post,class:'post-front'});
     for(let y=topY+10;y<baseY;y+=12)addSvg(svg,'rect',{x:xPos+post/2-1,y,width:2,height:3,fill:'#a6b8b5'});
@@ -237,7 +260,8 @@ function renderDrawing(result) {
     scene3d.update(state, result);
   } else {
     $('#drawing-title').textContent = 'WIDOK OD FRONTU';
-    $('#drawing-scale').textContent = state.rearProtection === 'none' ? 'WYBRANY REGAŁ' : `TYŁ: ${state.rearProtection === 'mesh' ? 'SIATKA' : 'BACKSTOPY'}`;
+    const selectedRow = result.rows.find(row => (row.sourceId ?? row.id) === selectedRack) ?? result.rows[0];
+    $('#drawing-scale').textContent = selectedRow?.rearProtection === 'none' ? 'WYBRANY REGAŁ' : `TYŁ: ${selectedRow?.rearProtection === 'mesh' ? 'SIATKA' : 'BACKSTOPY'}`;
     drawFront(result);
   }
 }
@@ -269,14 +293,17 @@ function render() {
   const depth = document.createElement('div'); depth.className = 'beam-result-row'; depth.innerHTML = `<span>Głębokość układu z korytarzami</span><strong>${format(result.overallDepth)}</strong>`; beamResults.append(depth);
   const deckingNames = {none:'Brak wypełnienia',mesh:'Panel siatkowy',grate:'Krata',bars:'Poprzeczki',board:'Płyta wiórowa'};
   const protectionNames = {none:'brak osłon',barrier:'odbojnica',polymer:'odbojnica z tworzywa'};
-  const equipment = document.createElement('div'); equipment.className = 'beam-result-row'; const equipmentLabel = document.createElement('span'); equipmentLabel.textContent = 'Wypełnienie / ochrona'; const equipmentValue = document.createElement('strong'); equipmentValue.textContent = `${deckingNames[state.decking]} / ${protectionNames[state.protection]}`; equipment.append(equipmentLabel,equipmentValue); beamResults.append(equipment);
+  const deckingSummary = [...new Set(result.levelsData.map(level => deckingNames[level.decking] ?? deckingNames.none))].join(' / ');
+  const rearSummary = [...new Set(result.rows.map(row => row.rearProtection).map(value => value === 'mesh' ? 'wygrodzenie siatkowe' : value === 'backstops' ? 'backstopy' : 'brak'))].join(' / ');
+  const equipment = document.createElement('div'); equipment.className = 'beam-result-row'; const equipmentLabel = document.createElement('span'); equipmentLabel.textContent = 'Wypełnienie / ochrona'; const equipmentValue = document.createElement('strong'); equipmentValue.textContent = `${deckingSummary} / ${protectionNames[state.protection]} / tył: ${rearSummary}`; equipment.append(equipmentLabel,equipmentValue); beamResults.append(equipment);
   $('#post-guard-legend').hidden = state.protection === 'none';
   const finish = document.createElement('div'); finish.className = 'beam-result-row'; const finishLabel = document.createElement('span'); finishLabel.textContent = 'Kolorystyka konstrukcji'; const finishValue = document.createElement('strong'); finishValue.textContent = 'Słupy RAL 5010 · belki RAL 1007 · odbojnice RAL 1004 · diagonale galva'; finish.append(finishLabel,finishValue); beamResults.append(finish);
   const rearNames = {none:'Brak',mesh:'Wygrodzenie siatkowe pleców',backstops:'Backstopy'};
-  const rear = document.createElement('div'); rear.className = 'beam-result-row'; const rearLabel = document.createElement('span'); rearLabel.textContent = 'Zabezpieczenie tyłu'; const rearValue = document.createElement('strong'); rearValue.textContent = rearNames[state.rearProtection]; rear.append(rearLabel,rearValue); beamResults.append(rear);
-  $('#rear-legend').hidden = state.rearProtection === 'none';
-  $('#rear-legend').dataset.type = state.rearProtection;
-  $('#rear-legend-label').textContent = rearNames[state.rearProtection];
+  const selectedResultRow = result.rows.find(row => (row.sourceId ?? row.id) === selectedRack) ?? result.rows[0];
+  const rear = document.createElement('div'); rear.className = 'beam-result-row'; const rearLabel = document.createElement('span'); rearLabel.textContent = 'Zabezpieczenie tyłu'; const rearValue = document.createElement('strong'); rearValue.textContent = rearSummary; rear.append(rearLabel,rearValue); beamResults.append(rear);
+  $('#rear-legend').hidden = !result.rows.some(row => row.rearProtection !== 'none');
+  $('#rear-legend').dataset.type = selectedResultRow?.rearProtection ?? 'none';
+  $('#rear-legend-label').textContent = selectedResultRow?.rearProtection ? rearNames[selectedResultRow.rearProtection] : 'Zabezpieczenie tyłu';
   const notices = $('#notices'); notices.replaceChildren();
   result.warnings.forEach((warning,index) => { const div = document.createElement('div'); div.className = `notice${(index === 0 && !result.valid) || warning.includes('obecnie wybrano brak wypełnienia') ? ' error' : ''}`; div.textContent = warning; notices.append(div); });
   if(state.protection === 'barrier') { const div = document.createElement('div'); div.className = 'notice'; div.textContent = 'Uwzględniono odbojnicę. Jej dokładny obrys i wymagane odstępy trzeba dobrać do ruchu wózka.'; notices.append(div); }
@@ -284,7 +311,7 @@ function render() {
 }
 
 syncInputs();
-document.querySelectorAll('#pallet-width,#pallet-depth,#pallet-height,#levels,#truck,#decking,#protection,#rear-protection').forEach(input => input.addEventListener('input', updateFromInputs));
+document.querySelectorAll('#pallet-width,#pallet-depth,#pallet-height,#levels,#truck,#decking,#protection,#rear-protection').forEach(input => input.addEventListener('input', event => updateFromInputs(event)));
 $('#frame-depth').addEventListener('change', () => { state.frameDepth = number('#frame-depth', 100, 3000); render(); });
 $('#frame-depth-auto').addEventListener('click', () => { state.frameDepth = null; render(); });
 $('#frame-height').addEventListener('change', () => { const height = number('#frame-height', currentResult.requiredFrameHeight, 50000); state.frameHeight = Math.max(currentResult.requiredFrameHeight, Math.round(height / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP); render(); });
@@ -298,7 +325,7 @@ $('#expand-3d').addEventListener('click', () => { const expanded = $('#drawing-w
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && $('#drawing-wrap').classList.contains('expanded')) { $('#drawing-wrap').classList.remove('expanded'); $('#expand-3d').textContent = 'Powiększ'; scene3d?.resize(); } });
 $('#add-single').addEventListener('click', () => addRack('single', numberValue($('#single-quantity').value, 1, 50)));
 $('#add-double').addEventListener('click', () => addRack('double', numberValue($('#double-quantity').value, 1, 50)));
-function addRack(type, quantity = 1) { const id = nextRackId(); state.racks.push({id,type,quantity:numberValue(quantity, 1, 50),sections:[2]}); selectedRack = id; render(); }
+function addRack(type, quantity = 1) { const id = nextRackId(); state.racks.push({id,type,quantity:numberValue(quantity, 1, 50),rearProtection:state.rearProtection,sections:[2]}); selectedRack = id; render(); }
 $('#reset-button').addEventListener('click', () => { Object.assign(state, defaultState()); selectedRack = state.racks[0].id; viewMode = 'plan'; syncInputs(); render(); });
 $('#print-button').addEventListener('click', () => window.print());
 render();
