@@ -46,8 +46,9 @@ test('paleta na posadzce, wysokości ładunków i światła wyznaczają kolejne 
   assert.deepEqual(result.levelsData.map(level => level.supportElevation), [0,1750,4300]);
   assert.deepEqual(result.levelsData.map(level => level.effectiveClear), [1600,2400,1200]);
   assert.deepEqual(result.levelsData.map(level => level.loadTop), [1400,4050,5200]);
-  assert.equal(result.rackHeight, 6000);
-  assert.match(result.warnings.join(' '), /Poziom 2/);
+  assert.deepEqual(result.levelsData.map(level => level.index), [0,1,2]);
+  assert.equal(result.rackHeight, 5800);
+  assert.match(result.warnings.join(' '), /Poziom 1/);
 });
 
 test('jeden poziom oznacza składowanie na posadzce bez belki', () => {
@@ -55,7 +56,7 @@ test('jeden poziom oznacza składowanie na posadzce bez belki', () => {
   assert.equal(result.levelsData[0].isFloor, true);
   assert.equal(result.levelsData[0].beamElevation, null);
   assert.equal(result.levelsData[0].loadTop, 1400);
-  assert.equal(result.rackHeight, 2000);
+  assert.equal(result.rackHeight, 1800);
   assert.equal(result.spots, 2);
 });
 
@@ -68,7 +69,8 @@ test('światło ma co najmniej 100 mm luzu, a położenia belek skok 50 mm', () 
   assert.deepEqual(result.levelsData.map(level => level.effectiveClear), [1500,1550,1500]);
   assert.deepEqual(result.levelsData.map(level => level.beamElevation), [null,1500,3200]);
   assert.equal(result.requiredFrameHeight, 5250);
-  assert.equal(result.rackHeight, 5250);
+  assert.equal(result.frameExtension, 300);
+  assert.equal(result.rackHeight, 5150);
 });
 
 test('ręczna głębokość ramy zachowuje minimalne odstępy ładunków i ram', () => {
@@ -94,12 +96,12 @@ test('ręczna głębokość ramy zachowuje minimalne odstępy ładunków i ram',
   assert.match(deep.warnings.join(' '), /jest równa lub większa/);
 });
 
-test('wysokość ramy dobierana jest co 250 mm i nie może być niższa od wymaganej', () => {
+test('przedłużenie ramy jest dobierane od 300 mm i zwiększane co 250 mm', () => {
   const base = {palletWidth:800,palletDepth:1200,palletHeight:1400,levels:2,standard:'standard',truck:'reach',racks:[{id:1,type:'single',sections:[2]}]};
   const automatic = calculate(base);
-  assert.equal(automatic.requiredFrameHeight % 250, 0);
-  assert.equal(calculate({...base,frameHeight:automatic.requiredFrameHeight+260}).rackHeight, automatic.requiredFrameHeight+500);
-  assert.equal(calculate({...base,frameHeight:250}).rackHeight, automatic.requiredFrameHeight);
+  assert.equal(automatic.frameExtension, 300);
+  assert.equal(calculate({...base,frameExtension:automatic.frameExtension+260}).frameExtension, 800);
+  assert.equal(calculate({...base,frameExtension:250}).frameExtension, 300);
 });
 
 test('ilość identycznych regałów rozwija się w planie bez powielania konfiguracji', () => {
@@ -131,12 +133,12 @@ test('wypełnienie poziomów i zabezpieczenie tyłu są niezależne dla konfigur
       { id: 2, type: 'double', sections: [2], rearProtection: 'backstops' }
     ]
   });
-  assert.deepEqual(result.levelsData.map(level => level.decking), ['bars', 'none']);
+  assert.deepEqual(result.levelsData.map(level => level.decking), ['none', 'none']);
   assert.deepEqual(result.rows.map(row => row.rearProtection), ['mesh', 'backstops']);
   assert.equal(result.rows[0].rearProjection, 0);
   assert.equal(result.rows[1].rearProjection, 0);
   assert.equal(result.rows[1].frameGap, 250);
-  assert.match(result.warnings.join(' '), /poziomach: 2/);
+  assert.match(result.warnings.join(' '), /poziomach: 1/);
   const projected = calculate({palletWidth:800,palletDepth:1200,palletHeight:1400,levels:1,standard:'standard',truck:'reach',frameDepth:1100,racks:[{id:3,type:'single',sections:[2],rearProtection:'mesh'}]});
   assert.equal(projected.rows[0].rearProjection, 50);
   const projectedBackstop = calculate({palletWidth:800,palletDepth:1200,palletHeight:1400,levels:1,standard:'standard',truck:'reach',frameDepth:1100,racks:[{id:4,type:'single',sections:[2],rearProtection:'backstops'}]});
