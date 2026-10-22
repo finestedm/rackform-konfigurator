@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0c1721">
   <meta name="description" content="Konfigurator układu regałów paletowych z doborem długości trawersów i rysunkiem poglądowym.">
   <title>Rackform — konfigurator regałów paletowych</title>
-  <link rel="stylesheet" href="./styles.css?v=20261022-4">
+  <link rel="stylesheet" href="./styles.css?v=20261022-5">
 </head>
 <body>
   <header class="topbar">
@@ -40,8 +40,7 @@
 
         <section class="panel" aria-labelledby="layout-title">
           <div class="panel-heading"><div><span class="step">02</span><h2 id="layout-title">Układ regałów</h2></div><p>Sekcje i rzędy</p></div>
-          <div class="field-grid two layout-inputs">
-            <label class="field"><span>Poziomy składowania</span><div class="input-unit"><input id="levels" type="number" min="1" max="8" step="1" value="3"><b>poz.</b></div></label>
+          <div class="field-grid layout-inputs">
             <label class="field"><span>Rodzaj wózka</span><select id="truck"><option value="counterbalance">Czołowy</option><option value="reach" selected>Reach truck</option><option value="vna">Systemowy VNA</option></select></label>
           </div>
           <div class="field-grid two frame-inputs">
@@ -49,9 +48,7 @@
             <div class="dimension-control"><label class="field" for="frame-extension"><span>Przedłużenie ramy powyżej ostatniego poziomu</span><div class="input-unit"><input id="frame-extension" type="number" min="300" max="5000" step="250" value="300"><b>mm</b></div></label><button type="button" class="dimension-auto" id="frame-extension-auto" hidden>Dobierz automatycznie</button></div>
           </div>
           <p class="hint frame-hint" id="frame-note">Domyślnie rama zewnętrzna jest o 100 mm płytsza od ładunku. Przedłużenie nad ostatnim poziomem dobieramy co 250 mm.</p>
-          <div class="level-heading"><strong>Wysokości poziomów</strong><span>pierwsza paleta stoi na posadzce</span></div>
-          <div id="level-list" class="level-list"></div>
-          <p class="hint level-hint">Poziom 0 jest na posadzce, a pierwsza belka nad nim. Wypełnienie dotyczy tylko poziomów belkowych. Światło wynosi co najmniej wysokość ładunku + 100 mm. Belki można ustawiać co 50 mm.</p>
+          <p class="hint level-hint">Poziomy, wysokości ładunków i wypełnienia ustawiasz osobno dla każdego regału przyciskiem „Poziomy”. Poziom 0 stoi na posadzce, a światło poziomów belkowych ma co najmniej 100 mm luzu.</p>
           <div class="section-list" id="rack-list"></div>
           <p class="hint">W aktywnej konfiguracji podaj długość trawersu i liczbę identycznych sekcji, np. 1900 mm: 5 oraz 2700 mm: 3. Typ regału możesz przełączyć między pojedynczym i podwójnym.</p>
           <div class="add-actions">
@@ -88,7 +85,7 @@
             <div class="metric"><span>DŁUGOŚĆ ZABUDOWY*</span><strong id="total-length">—</strong><small>najdłuższy rząd; profile 85 / 100 / 120 mm</small></div>
             <div class="metric"><span>KORYTARZ PRACY</span><strong id="aisle">—</strong><small id="aisle-note">wartość orientacyjna</small></div>
             <div class="metric"><span>MIEJSCA PALETOWE</span><strong id="pallet-spots">—</strong><small>wszystkie poziomy i strony</small></div>
-            <div class="metric"><span>WYSOKOŚĆ CAŁKOWITA</span><strong id="rack-height">—</strong><small>poziomy + przedłużenie ramy</small></div>
+            <div class="metric"><span>MAX. WYSOKOŚĆ CAŁKOWITA</span><strong id="rack-height">—</strong><small>najwyższy regał + przedłużenie ramy</small></div>
           </div>
           <div id="beam-results" class="beam-results"></div>
           <div id="notices" class="notices" aria-live="polite"></div>
@@ -100,9 +97,18 @@
   </main>
   <footer><span>RACKFORM / KONFIGURATOR WSTĘPNY</span><span>PRECYZJA ZACZYNA SIĘ OD PLANU.</span></footer>
   <section id="print-sheets" aria-label="Karty do wydruku"></section>
-  <script defer src="./src/calculator.js?v=20261022-5"></script>
+  <dialog id="level-modal" class="level-modal" aria-labelledby="level-modal-title">
+    <form method="dialog" class="level-modal-content">
+      <header class="level-modal-head"><div><span>REGAŁ / POZIOMY</span><h2 id="level-modal-title">Poziomy składowania</h2></div><button type="button" class="icon-button" id="level-modal-close" aria-label="Zamknij">×</button></header>
+      <label class="field modal-level-count"><span>Liczba poziomów składowania</span><div class="input-unit"><input id="modal-level-count" type="number" min="1" max="8" step="1"><b>poz.</b></div></label>
+      <p class="hint">Poziom 0 jest na posadzce. Kolejne belki są rozmieszczane co 50 mm; wypełnienie dotyczy tylko poziomów belkowych.</p>
+      <div id="modal-level-list" class="modal-level-list"></div>
+      <footer class="level-modal-actions"><button type="button" class="secondary-button" id="level-modal-cancel">Anuluj</button><button type="button" class="primary-button" id="level-modal-save">Zapisz poziomy <span>✓</span></button></footer>
+    </form>
+  </dialog>
+  <script defer src="./src/calculator.js?v=20261022-6"></script>
   <script defer src="./src/visuals.js?v=20261022-2"></script>
-  <script defer src="./src/scene3d.bundle.js?v=20261022-4"></script>
-  <script defer src="./src/app.js?v=20261022-6"></script>
+  <script defer src="./src/scene3d.bundle.js?v=20261022-5"></script>
+  <script defer src="./src/app.js?v=20261022-7"></script>
 </body>
 </html>

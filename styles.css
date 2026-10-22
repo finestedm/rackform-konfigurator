@@ -37,6 +37,7 @@
 .rack-table td:nth-child(2) select{min-width:105px}.rack-section-inline{grid-template-columns:92px 58px minmax(105px,1fr) 24px}.rack-section-inline input{height:30px;border:1px solid #dbe2df;background:#fff;color:#1e3237;font:700 11px 'Space Grotesk';padding:0 7px}.section-group-delete{font-size:17px;padding:2px;color:#8a5d53}.section-group-delete:not(:disabled):hover{color:#9b3f2e;background:#f8ebe7}
 
 #print-sheets{display:none}
+.level-modal{width:min(760px,calc(100vw - 28px));max-height:calc(100vh - 28px);border:0;padding:0;background:transparent;color:#16252d}.level-modal::backdrop{background:#10252acc}.level-modal-content{margin:0;background:#fff;box-shadow:0 24px 80px #0715198a;padding:25px}.level-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:18px;border-bottom:1px solid #dfe7e2}.level-modal-head span{font:700 9px 'DM Sans';letter-spacing:.15em;color:#789087}.level-modal-head h2{margin:5px 0 0;font:600 22px 'Space Grotesk';letter-spacing:-.04em}.modal-level-count{max-width:210px;margin:18px 0 0}.modal-level-list{max-height:47vh;overflow:auto;margin-top:16px;border:1px solid #e0e8e3}.modal-level-table{min-width:590px}.modal-level-table .input-unit b{top:10px}.modal-level-table input,.modal-level-table select{height:34px}.level-modal-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:20px}.level-modal-actions .primary-button{flex:initial}.rack-levels-action{margin-right:5px}
 @media print{
   @page{size:A4 landscape;margin:11mm}
   body{background:#fff!important;color:#16252d}
