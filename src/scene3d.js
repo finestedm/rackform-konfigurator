@@ -199,7 +199,7 @@ function create(container, onAddSection) {
       : `PALETA 01 NA POSADZCE · RAMA ${Math.round(result.frameDepth)} MM · ŁADUNEK W OBRYSIE RAMY`;
     const maxLength = M(Math.max(1, ...result.rows.map(row => row.nominalLength)));
     const totalDepth = M(Math.max(1, result.overallDepth));
-    const height = M(result.rackHeight);
+    const height = M(Math.max(result.rackHeight, ...result.rows.flatMap(row => [row.rackHeight, ...row.levelsData.map(level => level.loadTop)])));
     box(maxLength / 2, -0.035, totalDepth / 2, maxLength + 1.4, 0.07, totalDepth + 1.4, materials.floor);
     result.aisles.forEach((aisle, index) => {
       const start = M(aisle.start), end = M(aisle.end);

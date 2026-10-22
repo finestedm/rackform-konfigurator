@@ -81,9 +81,9 @@ function calculate(config) {
   const rearProjection = Math.max(0, (palletDepth - frameDepth) / 2);
   const rows = rackCopies.map(rack => {
     const levelsData = levelsForRack(config, rack);
-    const lastLevel = levelsData.at(-1);
-    const lastLevelTop = (lastLevel?.supportElevation ?? 0) + (lastLevel?.effectiveClear ?? 0);
-    const rackHeight = lastLevelTop + frameExtension;
+    const lastBeamLevel = levelsData.filter(level => !level.isFloor).at(-1);
+    const lastBeamTop = lastBeamLevel ? lastBeamLevel.beamElevation + BEAM_HEIGHT : 0;
+    const rackHeight = lastBeamTop + frameExtension;
     const rearProtection = rearProtectionForRack(config, rack);
     const extraGap = standard === 'nfpa' || rearProtection === 'backstops' ? 50 : 0;
     const minimumFrameGap = 200 + extraGap;
@@ -102,12 +102,12 @@ function calculate(config) {
     const nominalLength = beamSum + (sections.length + 1) * POST_OPTIONS[1];
     const maxLength = beamSum + (sections.length + 1) * POST_OPTIONS[2];
     const depth = rack.type === 'double' ? frameDepth * 2 + frameGap + Math.max(0, palletDepth - frameDepth) : Math.max(frameDepth, palletDepth);
-    return { ...rack, rearProtection, decking: levelsData.map(level => level.decking), levelsData, lastLevelTop, rackHeight, requiredFrameHeight: Math.ceil((lastLevelTop + requiredFrameExtension) / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP, rearProjection, sections, beamSum, minLength, nominalLength, maxLength, depth, frameGap: rack.type === 'double' ? frameGap : null, loadGap: rack.type === 'double' ? loadGap : null, spots: sections.reduce((sum, s) => sum + s.positions, 0) * levelsData.length * (rack.type === 'double' ? 2 : 1) };
+    return { ...rack, rearProtection, decking: levelsData.map(level => level.decking), levelsData, lastBeamTop, rackHeight, requiredFrameHeight: Math.ceil((lastBeamTop + requiredFrameExtension) / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP, rearProjection, sections, beamSum, minLength, nominalLength, maxLength, depth, frameGap: rack.type === 'double' ? frameGap : null, loadGap: rack.type === 'double' ? loadGap : null, spots: sections.reduce((sum, s) => sum + s.positions, 0) * levelsData.length * (rack.type === 'double' ? 2 : 1) };
   });
   const valid = rows.every(row => row.sections.every(s => s.length));
   const longestMin = valid ? Math.max(...rows.map(row => row.minLength)) : null;
   const longestMax = valid ? Math.max(...rows.map(row => row.maxLength)) : null;
-  const lastLevelTop = Math.max(0, ...rows.map(row => row.lastLevelTop));
+  const lastLevelTop = Math.max(0, ...rows.map(row => row.lastBeamTop));
   const rackHeight = Math.max(frameExtension, ...rows.map(row => row.rackHeight));
   const requiredFrameHeight = Math.max(requiredFrameExtension, ...rows.map(row => row.requiredFrameHeight));
   const aisle = TRUCKS[truck].aisle;
@@ -136,7 +136,7 @@ function calculate(config) {
   if (unsupportedLevels.length) warnings.push(unsupportedLevels.length === beamLevelCount
     ? `Głębokość ramy ${frameDepth} mm jest równa lub większa od głębokości ładunku ${palletDepth} mm. Wymagane jest wypełnienie poziomów, np. poprzeczki lub krata; obecnie wybrano brak wypełnienia.`
     : `Głębokość ramy ${frameDepth} mm jest równa lub większa od głębokości ładunku ${palletDepth} mm. Wypełnienie jest wymagane na poziomach: ${unsupportedLevels.join(', ')}.`);
-  if (config.frameExtension != null && Number(config.frameExtension) < requiredFrameExtension) warnings.push(`Przedłużenie ramy zwiększono do ${requiredFrameExtension} mm, aby zachować zapas nad ostatnim poziomem.`);
+  if (config.frameExtension != null && Number(config.frameExtension) < requiredFrameExtension) warnings.push(`Przedłużenie ramy zwiększono do ${requiredFrameExtension} mm, aby zachować zapas nad ostatnią belką.`);
   return { rows, layoutRows, aisles, levelsData: rows[0]?.levelsData ?? levelsForRack(config, {levels, levelDetails:config.levelDetails}), valid, longestMin, longestMax, frameDepth, frameGap: rows[0]?.frameGap ?? defaultFrameGap, loadGap: rows[0]?.loadGap ?? defaultLoadGap, supportRequired, lastLevelTop, requiredFrameExtension, requiredFrameHeight, frameExtension, rackHeight, aisle, overallDepth, spots: rows.reduce((sum, row) => sum + row.spots, 0), warnings };
 }
 

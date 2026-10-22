@@ -287,7 +287,8 @@ function drawFront(result, rowOverride, svgOverride) {
   const sum = lengths.reduce((a,b) => a+b, 0) + (sections.length+1)*100;
   const scale = totalWidth / sum;
   const post = Math.max(3, 100*scale);
-  const heightScale = 155 / row.rackHeight;
+  const visualHeight = Math.max(row.rackHeight, ...row.levelsData.map(level => level.loadTop));
+  const heightScale = 155 / visualHeight;
   const topY = baseY - row.rackHeight*heightScale;
   let x = baseX;
   if (row.rearProtection === 'mesh') {
@@ -373,7 +374,7 @@ function renderPrintSheets(result) {
       specs.append(
         printText('Paleta / ładunek', `${format(state.palletWidth)} × ${format(state.palletDepth)} × ${format(state.palletHeight)}`),
         printText('Wysokość regału', format(row.rackHeight)),
-        printText('Rama', `${format(result.frameDepth)} głębokości · ${format(result.frameExtension)} ponad ostatnim poziomem`),
+        printText('Rama', `${format(result.frameDepth)} głębokości · ${format(result.frameExtension)} ponad ostatnią belką`),
         printText('Słupy / belki', '85 / 100 / 120 mm · belka 150 mm'),
         printText('Sekcje', row.sections.map(section => `${format(section.length ?? section.needed)} / ${section.positions} pal.`).join(' · ')),
         printText('Wypełnienie', [...new Set(row.levelsData.filter(level => !level.isFloor).map(level => deckingNames[level.decking] ?? deckingNames.none))].join(' / ') || 'Brak'),
@@ -467,7 +468,7 @@ function render() {
   $('#frame-depth-auto').hidden = state.frameDepth == null;
   $('#frame-extension-auto').hidden = state.frameExtension == null;
   $('#frame-extension').min = result.requiredFrameExtension;
-  $('#frame-note').textContent = `Głębokość zewnętrzna ramy ${format(result.frameDepth)}; domyślnie 100 mm mniej niż ładunek. Przedłużenie nad ostatnim poziomem co ${FRAME_HEIGHT_STEP} mm (minimum ${format(result.requiredFrameExtension)}). ${result.supportRequired ? 'Gdy rama jest równa lub głębsza od ładunku, wymagane jest wypełnienie, np. poprzeczki lub krata.' : ''}`;
+  $('#frame-note').textContent = `Głębokość zewnętrzna ramy ${format(result.frameDepth)}; domyślnie 100 mm mniej niż ładunek. Przedłużenie liczymy od górnej krawędzi ostatniej belki, co ${FRAME_HEIGHT_STEP} mm (minimum ${format(result.requiredFrameExtension)}). ${result.supportRequired ? 'Gdy rama jest równa lub głębsza od ładunku, wymagane jest wypełnienie, np. poprzeczki lub krata.' : ''}`;
   renderPalletPreview();
   document.querySelectorAll('[data-standard]').forEach(button => button.classList.toggle('active', button.dataset.standard === state.standard));
   $('#clearance-note').textContent = `Założony minimalny luz boczny i między paletami: ${CLEARANCE[state.standard]} mm. Dobór z długości ${state.standard === 'standard' ? '1000 / 1900 / 2700 / 3600' : '1000 / 1900 / 2850 / 3800'} mm.`;
