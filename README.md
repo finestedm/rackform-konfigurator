@@ -5,10 +5,10 @@ Statyczny konfigurator do wstępnego planowania regałów paletowych. Działa be
 ## Funkcje
 
 - wymiary palety z izometrycznym szkicem, liczba poziomów oraz osobne wysokości światła i ładunku na każdym poziomie; poziom 0 jest na posadzce;
-- automatyczny dobór głębokości i wysokości ramy z możliwością ręcznej zmiany;
-- dobór trawersu dla 1–4 palet w każdej sekcji;
+- automatyczny dobór głębokości oraz przedłużenia ramy nad ostatnim poziomem z możliwością ręcznej zmiany;
+- grupowe wpisywanie sekcji według długości trawersu i liczby, np. 1900 mm × 5 oraz 2700 mm × 3;
 - zestawy 1000 / 1900 / 2700 / 3600 mm (standard) i 1000 / 1900 / 2850 / 3800 mm (NFPA 13);
-- dowolna liczba sekcji oraz rzędów pojedynczych i podwójnych;
+- dowolna liczba sekcji oraz rzędów pojedynczych i podwójnych, z możliwością przełączenia typu istniejącego rzędu;
 - brak wypełnienia lub panel siatkowy, krata, poprzeczki albo płyta wiórowa, wybierane osobno dla każdego poziomu; ochrona słupów: brak, odbojnica lub tuba z tworzywa zakładana na słup; zabezpieczenie tyłu: brak, wygrodzenie siatkowe pleców albo backstopy, wybierane osobno dla każdego regału;
 - orientacyjny korytarz dla wózka czołowego, reach trucka i VNA;
 - rysunek wybranego rzędu i wynik gotowy do wydruku lub zapisania jako PDF;
