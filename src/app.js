@@ -11,7 +11,7 @@ let scene3d = null;
 let currentResult;
 
 function defaultState() {
-  return { schemaVersion: 4, palletWidth: 800, palletDepth: 1200, palletHeight: 1400, frameDepth: null, frameHeight: null, levels: 3, levelDetails: Array.from({length:3}, () => ({clearHeight:1500,loadHeight:1400,decking:'none'})), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', quantity: 1, rearProtection: 'none', sections: [3, 2] }] };
+  return { schemaVersion: 5, palletWidth: 800, palletDepth: 1200, palletHeight: 1400, frameDepth: null, frameExtension: null, levels: 3, levelDetails: Array.from({length:3}, () => ({clearHeight:1500,loadHeight:1400,decking:'none'})), standard: 'standard', truck: 'reach', decking: 'none', protection: 'none', rearProtection: 'none', racks: [{ id: 1, type: 'single', quantity: 1, rearProtection: 'none', sections: [3, 2] }] };
 }
 function loadState() {
   try {
@@ -20,14 +20,14 @@ function loadState() {
       saved.levelDetails = Array.from({length:saved.levels}, (_, index) => saved.levelDetails?.[index] ?? {clearHeight:saved.palletHeight+VERTICAL_CLEARANCE,loadHeight:saved.palletHeight});
       if (!saved.schemaVersion) saved.levelDetails.forEach(detail => { if (detail.clearHeight === detail.loadHeight + 200) detail.clearHeight = detail.loadHeight + VERTICAL_CLEARANCE; });
       saved.racks = saved.racks.map(rack => ({ ...rack, quantity: Math.max(1, Math.min(50, Math.round(Number(rack.quantity) || 1))) }));
-      saved.schemaVersion = 4;
+      saved.schemaVersion = 5;
       saved.frameDepth = saved.frameDepth == null || !Number.isFinite(Number(saved.frameDepth)) ? null : Number(saved.frameDepth);
-      saved.frameHeight = saved.frameHeight == null || !Number.isFinite(Number(saved.frameHeight)) ? null : Number(saved.frameHeight);
+      saved.frameExtension = saved.frameExtension == null || !Number.isFinite(Number(saved.frameExtension)) ? null : Number(saved.frameExtension);
       if (['polymer-asafe','polymer-ampere'].includes(saved.protection)) saved.protection = 'polymer';
       saved.protection = ['none','barrier','polymer'].includes(saved.protection) ? saved.protection : 'none';
       saved.decking = ['none','mesh','grate','bars','board'].includes(saved.decking) ? saved.decking : 'none';
       saved.rearProtection = ['none','mesh','backstops'].includes(saved.rearProtection) ? saved.rearProtection : 'none';
-      saved.levelDetails = saved.levelDetails.map(detail => ({ ...detail, decking: ['none','mesh','grate','bars','board'].includes(detail.decking) ? detail.decking : saved.decking }));
+      saved.levelDetails = saved.levelDetails.map((detail, index) => ({ ...detail, decking: index === 0 ? 'none' : ['none','mesh','grate','bars','board'].includes(detail.decking) ? detail.decking : saved.decking }));
       saved.racks = saved.racks.map(rack => ({ ...rack, rearProtection: ['none','mesh','backstops'].includes(rack.rearProtection) ? rack.rearProtection : saved.rearProtection }));
       return saved;
     }
@@ -59,13 +59,13 @@ function updateFromInputs(event) {
     if (detail.loadHeight === previousHeight) detail.loadHeight = state.palletHeight;
     if (detail.clearHeight === previousHeight + VERTICAL_CLEARANCE) detail.clearHeight = state.palletHeight + VERTICAL_CLEARANCE;
   });
-  while (state.levelDetails.length < state.levels) state.levelDetails.push({clearHeight:state.palletHeight+VERTICAL_CLEARANCE,loadHeight:state.palletHeight});
+  while (state.levelDetails.length < state.levels) state.levelDetails.push({clearHeight:state.palletHeight+VERTICAL_CLEARANCE,loadHeight:state.palletHeight,decking:'none'});
   state.levelDetails.length = state.levels;
   state.truck = $('#truck').value;
   state.decking = $('#decking').value;
   state.protection = $('#protection').value;
   state.rearProtection = $('#rear-protection').value;
-  if (event?.target?.id === 'decking') state.levelDetails.forEach(detail => { detail.decking = state.decking; });
+  if (event?.target?.id === 'decking') state.levelDetails.forEach((detail, index) => { detail.decking = index === 0 ? 'none' : state.decking; });
   if (event?.target?.id === 'rear-protection') state.racks.forEach(rack => { rack.rearProtection = state.rearProtection; });
   render();
 }
@@ -75,29 +75,22 @@ function countWord(count, one, few, many) { return count === 1 ? one : count < 5
 
 function renderLevelCards(result) {
   const list = $('#level-list'); list.replaceChildren();
+  const table = document.createElement('table'); table.className = 'data-table level-table';
+  table.innerHTML = '<thead><tr><th>Poziom</th><th>Światło</th><th>Ładunek</th><th>Wypełnienie</th><th>Położenie</th></tr></thead>';
+  const body = document.createElement('tbody');
   result.levelsData.forEach((level, index) => {
-    const card = document.createElement('div'); card.className = 'level-card';
-    const name = document.createElement('strong'); name.textContent = `POZIOM ${String(index+1).padStart(2,'0')}`;
-    const createField = (label, key, value) => {
-      const field = document.createElement('label'); field.className = 'field';
-      const caption = document.createElement('span'); caption.textContent = label;
-      const unit = document.createElement('div'); unit.className = 'input-unit';
-      const input = document.createElement('input'); input.type = 'number'; input.min = '300'; input.max = '4000'; input.step = key === 'clearHeight' ? String(LEVEL_STEP) : '10'; input.value = value; input.setAttribute('aria-label', `${label}, poziom ${index+1}`);
-      input.addEventListener('change', () => { const value = Number(input.value); const bounded = Number.isFinite(value) ? Math.max(300, Math.min(4000, value)) : 300; state.levelDetails[index][key] = key === 'clearHeight' ? Math.round(bounded / LEVEL_STEP) * LEVEL_STEP : bounded; render(); });
-      const suffix = document.createElement('b'); suffix.textContent = 'mm'; unit.append(input, suffix); field.append(caption, unit); return field;
-    };
-    const fields = document.createElement('div'); fields.className = 'level-fields';
-    fields.append(createField('Światło poziomu', 'clearHeight', level.clearHeight), createField('Wysokość ładunku', 'loadHeight', level.loadHeight));
-    const deckingField = document.createElement('label'); deckingField.className = 'field level-decking-field';
-    const deckingCaption = document.createElement('span'); deckingCaption.textContent = 'Wypełnienie poziomu';
-    const deckingSelect = document.createElement('select'); deckingSelect.setAttribute('aria-label', `Wypełnienie poziomu ${index + 1}`);
-    [['none','Brak wypełnienia'],['mesh','Panel siatkowy'],['grate','Krata'],['bars','Poprzeczki'],['board','Płyta wiórowa']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; deckingSelect.append(option); });
-    deckingSelect.value = level.decking ?? state.levelDetails[index].decking ?? state.decking;
-    deckingSelect.addEventListener('change', () => { state.levelDetails[index].decking = deckingSelect.value; render(); });
-    deckingField.append(deckingCaption, deckingSelect);
-    const computed = document.createElement('small'); computed.className = 'level-computed'; computed.textContent = level.isFloor ? `Paleta na posadzce · pierwsza belka nad nią na ${format(level.effectiveClear)}` : `Belka na ${format(level.beamElevation)} · przyjęte światło ${format(level.effectiveClear)}`;
-    card.append(name, fields, deckingField, computed); list.append(card);
+    const row = document.createElement('tr');
+    const number = document.createElement('th'); number.scope = 'row'; number.textContent = String(index);
+    const numberInput = (key, value, step) => { const unit = document.createElement('div'); unit.className = 'input-unit'; const input = document.createElement('input'); input.type = 'number'; input.min = '300'; input.max = '4000'; input.step = String(step); input.value = value; input.setAttribute('aria-label', `${key === 'clearHeight' ? 'Światło poziomu' : 'Wysokość ładunku'}, poziom ${index}`); input.addEventListener('change', () => { const raw = Number(input.value); const bounded = Number.isFinite(raw) ? Math.max(300, Math.min(4000, raw)) : 300; state.levelDetails[index][key] = key === 'clearHeight' ? Math.round(bounded / LEVEL_STEP) * LEVEL_STEP : bounded; render(); }); const suffix = document.createElement('b'); suffix.textContent = 'mm'; unit.append(input, suffix); return unit; };
+    const clear = document.createElement('td'); clear.append(numberInput('clearHeight', level.clearHeight, LEVEL_STEP));
+    const load = document.createElement('td'); load.append(numberInput('loadHeight', level.loadHeight, 10));
+    const decking = document.createElement('td');
+    if (level.isFloor) decking.textContent = 'Posadzka';
+    else { const select = document.createElement('select'); select.setAttribute('aria-label', `Wypełnienie poziomu ${index}`); [['none','Brak'],['mesh','Panel siatkowy'],['grate','Krata'],['bars','Poprzeczki'],['board','Płyta wiórowa']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; select.append(option); }); select.value = level.decking ?? state.levelDetails[index].decking ?? state.decking; select.addEventListener('change', () => { state.levelDetails[index].decking = select.value; render(); }); decking.append(select); }
+    const position = document.createElement('td'); position.className = 'level-position'; position.textContent = level.isFloor ? 'Paleta na posadzce' : `Belka ${format(level.beamElevation)} · światło ${format(level.effectiveClear)}`;
+    row.append(number, clear, load, decking, position); body.append(row);
   });
+  table.append(body); list.append(table);
 }
 
 function addSection(id) { const rack = state.racks.find(row => row.id === id); if (!rack) return; rack.sections.push(2); selectedRack = id; render(); }
@@ -174,6 +167,30 @@ function renderRackCards(result) {
   });
 }
 
+function renderRackTable(result) {
+  const list = $('#rack-list'); list.replaceChildren();
+  const table = document.createElement('table'); table.className = 'data-table rack-table';
+  table.innerHTML = '<thead><tr><th>Konfiguracja</th><th>Typ</th><th>Ilość</th><th>Sekcje / trawersy</th><th>Tył</th><th>Akcje</th></tr></thead>';
+  const body = document.createElement('tbody');
+  state.racks.forEach((rack, groupIndex) => {
+    const row = result.rows.find(candidate => candidate.sourceId === rack.id || candidate.id === rack.id);
+    if (!row) return;
+    const active = selectedRack === rack.id;
+    const tr = document.createElement('tr'); tr.className = active ? 'rack-table-row selected' : 'rack-table-row';
+    const titleCell = document.createElement('th'); titleCell.scope = 'row'; const title = document.createElement('button'); title.type = 'button'; title.className = 'rack-select'; title.textContent = `${String(groupIndex + 1).padStart(2,'0')} · ${row.type === 'double' ? 'Podwójny' : 'Pojedynczy'}`; title.setAttribute('aria-expanded', String(active)); title.addEventListener('click', () => { selectedRack = rack.id; render(); }); titleCell.append(title);
+    const typeCell = document.createElement('td'); typeCell.textContent = row.type === 'double' ? '2 strony' : '1 strona';
+    const qtyCell = document.createElement('td'); const qty = document.createElement('input'); qty.type = 'number'; qty.min = '1'; qty.max = '50'; qty.step = '1'; qty.value = rack.quantity; qty.setAttribute('aria-label', `Ilość regałów w konfiguracji ${groupIndex}`); qty.addEventListener('change', () => { rack.quantity = numberValue(qty.value, 1, 50); selectedRack = rack.id; render(); }); qtyCell.append(qty);
+    const sectionsCell = document.createElement('td'); sectionsCell.className = 'rack-sections-cell';
+    if (active) {
+      rack.sections.forEach((positions, sectionIndex) => { const section = row.sections[sectionIndex]; const wrap = document.createElement('div'); wrap.className = 'rack-section-inline'; const select = document.createElement('select'); select.setAttribute('aria-label', `Liczba palet w sekcji ${sectionIndex + 1}, konfiguracja ${groupIndex}`); for (let count = 1; count <= 4; count++) { const option = document.createElement('option'); option.value = count; option.textContent = `${count} pal.`; select.append(option); } select.value = positions; select.addEventListener('change', () => { rack.sections[sectionIndex] = Number(select.value); selectedRack = rack.id; render(); }); const beam = document.createElement('small'); beam.textContent = section.length ? `${format(section.length)} · luz ${Math.round(section.clearance)} mm` : 'brak trawersu'; const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.textContent = '×'; remove.title = 'Usuń sekcję'; remove.disabled = rack.sections.length === 1; remove.addEventListener('click', () => { rack.sections.splice(sectionIndex, 1); render(); }); wrap.append(select, beam, remove); sectionsCell.append(wrap); }); const add = document.createElement('button'); add.type = 'button'; add.className = 'small-add'; add.textContent = '＋ Sekcja'; add.addEventListener('click', () => addSection(rack.id)); sectionsCell.append(add);
+    } else { sectionsCell.textContent = rack.sections.map((positions, index) => `${index + 1}: ${positions} pal. / ${row.sections[index]?.length ?? '—'} mm`).join(' · '); }
+    const rearCell = document.createElement('td'); const rear = document.createElement('select'); rear.setAttribute('aria-label', `Zabezpieczenie tyłu konfiguracji ${groupIndex}`); [['none','Brak'],['mesh','Siatka'],['backstops','Backstopy']].forEach(([value,label]) => { const option = document.createElement('option'); option.value = value; option.textContent = label; rear.append(option); }); rear.value = rack.rearProtection ?? state.rearProtection; rear.addEventListener('change', () => { rack.rearProtection = rear.value; selectedRack = rack.id; render(); }); rearCell.append(rear);
+    const actions = document.createElement('td'); actions.className = 'rack-table-actions'; const up = document.createElement('button'); up.type = 'button'; up.className = 'icon-button'; up.textContent = '↑'; up.title = 'Przenieś wyżej'; up.disabled = groupIndex === 0; up.addEventListener('click', () => moveRack(rack.id, -1)); const down = document.createElement('button'); down.type = 'button'; down.className = 'icon-button'; down.textContent = '↓'; down.title = 'Przenieś niżej'; down.disabled = groupIndex === state.racks.length - 1; down.addEventListener('click', () => moveRack(rack.id, 1)); const duplicate = document.createElement('button'); duplicate.type = 'button'; duplicate.className = 'rack-action'; duplicate.textContent = 'Duplikuj'; duplicate.addEventListener('click', () => duplicateRack(rack.id)); const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.textContent = '×'; remove.title = 'Usuń konfigurację'; remove.disabled = state.racks.length === 1; remove.addEventListener('click', () => { state.racks = state.racks.filter(item => item.id !== rack.id); selectedRack = state.racks[0].id; render(); }); actions.append(up, down, duplicate, remove);
+    tr.append(titleCell, typeCell, qtyCell, sectionsCell, rearCell, actions); body.append(tr);
+  });
+  table.append(body); list.append(table);
+}
+
 function numberValue(value, min, max) { const parsed = Number(value); return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : min; }
 
 function svgEl(name, attrs = {}) { const el = document.createElementNS('http://www.w3.org/2000/svg', name); for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, String(v)); return el; }
@@ -237,6 +254,30 @@ function drawFront(result) {
   svg.setAttribute('aria-label',`Rysunek rzędu ${result.rows.findIndex(r=>r.id===row.id)+1}: ${row.sections.length} ${countWord(row.sections.length,'sekcja','sekcje','sekcji')}, ${state.levels} ${countWord(state.levels,'poziom','poziomy','poziomów')}, wysokość ${result.rackHeight} mm, słupy 85, 100 lub 120 mm`);
 }
 
+function renderPalletPreview() {
+  const svg = $('#pallet-preview-svg'); if (!svg) return;
+  svg.replaceChildren();
+  const width = Math.max(1, state.palletWidth), depth = Math.max(1, state.palletDepth), height = Math.max(1, state.palletHeight);
+  const scale = Math.min(0.22, 250 / (width + depth * 0.45));
+  const dx = width * scale, dy = depth * scale * 0.45, cargoH = Math.min(62, Math.max(30, height * 0.045));
+  const x = 70, y = 136;
+  const A = [x, y], B = [x + dx, y], D = [x + dy, y - dy * 0.55], C = [B[0] + dy, B[1] - dy * 0.55];
+  const lift = point => [point[0], point[1] - cargoH];
+  const LA = lift(A), LB = lift(B), LC = lift(C), LD = lift(D);
+  const polygon = (points, attrs) => { const p = svgEl('polygon', {...attrs, points: points.map(point => point.join(',')).join(' ')}); svg.append(p); return p; };
+  polygon([A,B,C,D], {fill:'#b98a55', stroke:'#7b6245','stroke-width':1});
+  polygon([LA,LB,LC,LD], {fill:'#b6c8ba', stroke:'#668577','stroke-width':1});
+  polygon([LA,LB,B,A], {fill:'#9fb5a6', stroke:'#668577','stroke-width':1});
+  polygon([LB,LC,C,B], {fill:'#8fa99a', stroke:'#668577','stroke-width':1});
+  for (let i = 1; i < 4; i++) { const px = A[0] + dx * i / 4; svg.append(svgEl('line',{x1:px,y1:y-1,x2:px,y2:y+7,stroke:'#ead0a4','stroke-width':2})); }
+  const line = (a,b,attrs={}) => svg.append(svgEl('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],...attrs}));
+  const text = (point,value,attrs={}) => { const node=svgEl('text',{x:point[0],y:point[1],...attrs}); node.textContent=value; svg.append(node); };
+  line([A[0], y+16], [B[0], y+16], {stroke:'#496c63','stroke-width':1}); line([A[0],y+11],[A[0],y+21],{stroke:'#496c63'}); line([B[0],y+11],[B[0],y+21],{stroke:'#496c63'}); text([(A[0]+B[0])/2,y+30,],`SZER. ${width} mm`,{'text-anchor':'middle',fill:'#496c63','font-size':11,'font-family':'DM Sans','font-weight':700});
+  line([A[0]-5,A[1]-2],[D[0]-5,D[1]-2],{stroke:'#496c63','stroke-width':1}); line([A[0]-9,A[1]-1],[A[0]-2,A[1]-4],{stroke:'#496c63'}); line([D[0]-9,D[1]-1],[D[0]-2,D[1]-4],{stroke:'#496c63'}); text([D[0]-17,(A[1]+D[1])/2],`GŁ. ${depth} mm`,{'text-anchor':'middle',fill:'#496c63','font-size':11,'font-family':'DM Sans','font-weight':700,transform:`rotate(-24 ${D[0]-17} ${(A[1]+D[1])/2})`});
+  line([C[0]+12,C[1]],[LC[0]+12,LC[1]],{stroke:'#496c63','stroke-width':1}); line([C[0]+8,C[1]],[C[0]+16,C[1]],{stroke:'#496c63'}); line([LC[0]+8,LC[1]],[LC[0]+16,LC[1]],{stroke:'#496c63'}); text([C[0]+22,(C[1]+LC[1])/2+4],`WYS. ${height} mm`,{fill:'#496c63','font-size':11,'font-family':'DM Sans','font-weight':700});
+  text([18,25],'PALETA / ŁADUNEK · RZUT IZOMETRYCZNY',{fill:'#49625b','font-size':11,'font-family':'DM Sans','font-weight':700});
+}
+
 function renderDrawing(result) {
   const svg = $('#rack-drawing');
   svg.setAttribute('role', viewMode === 'front' ? 'img' : 'group');
@@ -268,18 +309,19 @@ function renderDrawing(result) {
 
 function render() {
   let result = calculate(state);
-  if (state.frameHeight != null && state.frameHeight < result.requiredFrameHeight) { state.frameHeight = result.requiredFrameHeight; result = calculate(state); }
+  if (state.frameExtension != null && state.frameExtension < result.requiredFrameExtension) { state.frameExtension = result.requiredFrameExtension; result = calculate(state); }
   currentResult = result;
   save();
   $('#frame-depth').value = result.frameDepth;
-  $('#frame-height').value = result.rackHeight;
+  $('#frame-extension').value = result.frameExtension;
   $('#frame-depth-auto').hidden = state.frameDepth == null;
-  $('#frame-height-auto').hidden = state.frameHeight == null;
-  $('#frame-height').min = result.requiredFrameHeight;
-  $('#frame-note').textContent = `Głębokość ramy ${format(result.frameDepth)}; domyślnie 100 mm mniej niż ładunek. Wysokość co ${FRAME_HEIGHT_STEP} mm (minimum ${format(result.requiredFrameHeight)}). ${result.supportRequired ? 'Gdy rama jest równa lub głębsza od ładunku, wymagane jest wypełnienie, np. poprzeczki lub krata.' : ''}`;
+  $('#frame-extension-auto').hidden = state.frameExtension == null;
+  $('#frame-extension').min = result.requiredFrameExtension;
+  $('#frame-note').textContent = `Głębokość zewnętrzna ramy ${format(result.frameDepth)}; domyślnie 100 mm mniej niż ładunek. Przedłużenie nad ostatnim poziomem co ${FRAME_HEIGHT_STEP} mm (minimum ${format(result.requiredFrameExtension)}). ${result.supportRequired ? 'Gdy rama jest równa lub głębsza od ładunku, wymagane jest wypełnienie, np. poprzeczki lub krata.' : ''}`;
+  renderPalletPreview();
   document.querySelectorAll('[data-standard]').forEach(button => button.classList.toggle('active', button.dataset.standard === state.standard));
   $('#clearance-note').textContent = `Założony minimalny luz boczny i między paletami: ${CLEARANCE[state.standard]} mm. Dobór z długości ${state.standard === 'standard' ? '1000 / 1900 / 2700 / 3600' : '1000 / 1900 / 2850 / 3800'} mm.`;
-  renderLevelCards(result); renderRackCards(result); renderDrawing(result);
+  renderLevelCards(result); renderRackTable(result); renderDrawing(result);
   $('#total-length').textContent = result.valid ? formatRange(result.longestMin, result.longestMax) : 'Brak doboru';
   $('#aisle').textContent = format(result.aisle);
   $('#aisle-note').textContent = `${TRUCKS[state.truck].label}, orientacyjnie`;
@@ -288,7 +330,7 @@ function render() {
   const beamResults = $('#beam-results'); beamResults.replaceChildren();
   const heading = document.createElement('div'); heading.className = 'beam-title'; heading.textContent = 'DOBÓR TRAWERSÓW / WYMIARY RZĘDÓW'; beamResults.append(heading);
   result.rows.forEach((row,index) => { const line = document.createElement('div'); line.className = 'beam-result-row'; const label = document.createElement('span'); label.textContent = `${rowName(index,row.type)} · ${row.sections.map(s => s.length ? `${s.length}` : '—').join(' + ')} mm`; const value = document.createElement('strong'); value.textContent = row.sections.every(s=>s.length) ? `${formatRange(row.minLength,row.maxLength)}*` : 'Brak doboru'; line.append(label,value); beamResults.append(line); });
-  const frame = document.createElement('div'); frame.className = 'beam-result-row'; frame.innerHTML = `<span>Rama · głębokość / wysokość</span><strong>${format(result.frameDepth)} / ${format(result.rackHeight)}</strong>`; beamResults.append(frame);
+  const frame = document.createElement('div'); frame.className = 'beam-result-row'; frame.innerHTML = `<span>Rama · głębokość zewnętrzna / przedłużenie</span><strong>${format(result.frameDepth)} / ${format(result.frameExtension)}</strong>`; beamResults.append(frame);
   result.rows.filter(row => row.type === 'double').forEach((row,index) => { const gap = document.createElement('div'); gap.className = 'beam-result-row'; const label = document.createElement('span'); label.textContent = `Regał podwójny ${index + 1} · odstęp ładunków / ram`; const value = document.createElement('strong'); value.textContent = `${format(row.loadGap)} / ${format(row.frameGap)}`; gap.append(label,value); beamResults.append(gap); });
   const depth = document.createElement('div'); depth.className = 'beam-result-row'; depth.innerHTML = `<span>Głębokość układu z korytarzami</span><strong>${format(result.overallDepth)}</strong>`; beamResults.append(depth);
   const deckingNames = {none:'Brak wypełnienia',mesh:'Panel siatkowy',grate:'Krata',bars:'Poprzeczki',board:'Płyta wiórowa'};
@@ -318,8 +360,8 @@ syncInputs();
 document.querySelectorAll('#pallet-width,#pallet-depth,#pallet-height,#levels,#truck,#decking,#protection,#rear-protection').forEach(input => input.addEventListener('input', event => updateFromInputs(event)));
 $('#frame-depth').addEventListener('change', () => { state.frameDepth = number('#frame-depth', 100, 3000); render(); });
 $('#frame-depth-auto').addEventListener('click', () => { state.frameDepth = null; render(); });
-$('#frame-height').addEventListener('change', () => { const height = number('#frame-height', currentResult.requiredFrameHeight, 50000); state.frameHeight = Math.max(currentResult.requiredFrameHeight, Math.round(height / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP); render(); });
-$('#frame-height-auto').addEventListener('click', () => { state.frameHeight = null; render(); });
+$('#frame-extension').addEventListener('change', () => { const extension = number('#frame-extension', currentResult.requiredFrameExtension, 5000); state.frameExtension = Math.max(currentResult.requiredFrameExtension, Math.round(extension / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP); render(); });
+$('#frame-extension-auto').addEventListener('click', () => { state.frameExtension = null; render(); });
 document.querySelectorAll('[data-standard]').forEach(button => button.addEventListener('click', () => { state.standard = button.dataset.standard; render(); }));
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => { viewMode = button.dataset.view; renderDrawing(currentResult); }));
 $('#rotate-left').addEventListener('click', () => scene3d?.rotateBy(-Math.PI / 8));

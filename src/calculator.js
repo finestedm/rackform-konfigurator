@@ -28,6 +28,7 @@ function selectBeam(palletWidth, positions, standard) {
 const DECKING = new Set(['none', 'mesh', 'grate', 'bars', 'board']);
 const REAR_PROTECTION = new Set(['none', 'mesh', 'backstops']);
 function deckingForLevel(config, index) {
+  if (index === 0) return 'none';
   const value = config.levelDetails?.[index]?.decking;
   return DECKING.has(value) ? value : (DECKING.has(config.decking) ? config.decking : 'none');
 }
@@ -48,7 +49,7 @@ function calculate(config) {
     const effectiveClear = Math.ceil(Math.max(clearHeight, loadHeight + VERTICAL_CLEARANCE) / LEVEL_STEP) * LEVEL_STEP;
     const beamElevation = previousLevel ? previousLevel.supportElevation + previousLevel.effectiveClear : null;
     const supportElevation = beamElevation === null ? 0 : beamElevation + BEAM_HEIGHT;
-    const level = { index: index + 1, isFloor: index === 0, beamElevation, supportElevation, loadHeight, clearHeight, effectiveClear, loadTop: supportElevation + loadHeight, decking: deckingForLevel(config, index) };
+    const level = { index, isFloor: index === 0, beamElevation, supportElevation, loadHeight, clearHeight, effectiveClear, loadTop: supportElevation + loadHeight, decking: deckingForLevel(config, index) };
     previousLevel = level;
     return level;
   });
@@ -86,8 +87,14 @@ function calculate(config) {
   const valid = rows.every(row => row.sections.every(s => s.length));
   const longestMin = valid ? Math.max(...rows.map(row => row.minLength)) : null;
   const longestMax = valid ? Math.max(...rows.map(row => row.maxLength)) : null;
-  const requiredFrameHeight = Math.ceil(((previousLevel?.supportElevation ?? 0) + (previousLevel?.effectiveClear ?? 0) + 300) / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP;
-  const rackHeight = config.frameHeight == null ? requiredFrameHeight : Math.max(requiredFrameHeight, Math.ceil(Number(config.frameHeight) / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP);
+  const lastLevelTop = (previousLevel?.supportElevation ?? 0) + (previousLevel?.effectiveClear ?? 0);
+  const requiredFrameExtension = 300;
+  const legacyExtension = config.frameHeight == null ? null : Number(config.frameHeight) - lastLevelTop;
+  const requestedExtension = config.frameExtension == null ? legacyExtension : Number(config.frameExtension);
+  const extensionInput = Number.isFinite(requestedExtension) ? requestedExtension : requiredFrameExtension;
+  const frameExtension = Math.max(requiredFrameExtension, requiredFrameExtension + Math.ceil(Math.max(0, extensionInput - requiredFrameExtension) / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP);
+  const rackHeight = lastLevelTop + frameExtension;
+  const requiredFrameHeight = Math.ceil((lastLevelTop + requiredFrameExtension) / FRAME_HEIGHT_STEP) * FRAME_HEIGHT_STEP;
   const aisle = TRUCKS[truck].aisle;
   const layoutRows = [];
   const aisles = [];
@@ -109,12 +116,12 @@ function calculate(config) {
   const expanded = levelsData.filter(level => level.effectiveClear > level.clearHeight).map(level => level.index);
   if (expanded.length) warnings.push(`Poziom ${expanded.join(', ')}: zadane światło jest za małe dla ładunku i 100 mm luzu lub nie mieści się w skoku 50 mm. Do obliczeń przyjęto większą wysokość.`);
   const supportRequired = frameDepth >= palletDepth;
-  const unsupportedLevels = supportRequired ? levelsData.filter(level => level.decking === 'none').map(level => level.index) : [];
+  const unsupportedLevels = supportRequired ? levelsData.filter(level => !level.isFloor && level.decking === 'none').map(level => level.index) : [];
   if (unsupportedLevels.length) warnings.push(unsupportedLevels.length === levelsData.length
     ? `Głębokość ramy ${frameDepth} mm jest równa lub większa od głębokości ładunku ${palletDepth} mm. Wymagane jest wypełnienie poziomów, np. poprzeczki lub krata; obecnie wybrano brak wypełnienia.`
     : `Głębokość ramy ${frameDepth} mm jest równa lub większa od głębokości ładunku ${palletDepth} mm. Wypełnienie jest wymagane na poziomach: ${unsupportedLevels.join(', ')}.`);
-  if (config.frameHeight != null && Number(config.frameHeight) < requiredFrameHeight) warnings.push(`Wysokość ramy została zwiększona do ${requiredFrameHeight} mm, aby pomieścić poziomy i ładunki.`);
-  return { rows, layoutRows, aisles, levelsData, valid, longestMin, longestMax, frameDepth, frameGap: rows[0]?.frameGap ?? defaultFrameGap, loadGap: rows[0]?.loadGap ?? defaultLoadGap, supportRequired, requiredFrameHeight, rackHeight, aisle, overallDepth, spots: rows.reduce((sum, row) => sum + row.spots, 0), warnings };
+  if (config.frameExtension != null && Number(config.frameExtension) < requiredFrameExtension) warnings.push(`Przedłużenie ramy zwiększono do ${requiredFrameExtension} mm, aby zachować zapas nad ostatnim poziomem.`);
+  return { rows, layoutRows, aisles, levelsData, valid, longestMin, longestMax, frameDepth, frameGap: rows[0]?.frameGap ?? defaultFrameGap, loadGap: rows[0]?.loadGap ?? defaultLoadGap, supportRequired, lastLevelTop, requiredFrameExtension, requiredFrameHeight, frameExtension, rackHeight, aisle, overallDepth, spots: rows.reduce((sum, row) => sum + row.spots, 0), warnings };
 }
 
 root.RackformCalculator = { BEAMS, CLEARANCE, POST_OPTIONS, BEAM_HEIGHT, LEVEL_STEP, FRAME_HEIGHT_STEP, VERTICAL_CLEARANCE, TRUCKS, selectBeam, calculate };

@@ -209,12 +209,15 @@ function create(container, onAddSection) {
       const length = M(row.nominalLength);
       const start = M(row.start), end = M(row.end);
       const laneDepth = M(result.frameDepth);
+      const postDepth = 0.1;
       const loadDepth = M(config.palletDepth);
       const outerOverhang = Math.max(0, (loadDepth - laneDepth) / 2);
-      const firstFront = start + outerOverhang;
-      const firstBack = firstFront + laneDepth;
-      const secondFront = firstBack + M(row.frameGap || 0);
-      const lanes = row.type === 'double' ? [[firstFront, firstBack], [secondFront, secondFront + laneDepth]] : [[firstFront, firstBack]];
+      // frameDepth is the external dimension: the distance between upright
+      // outer faces. Upright centers are therefore one post thickness closer.
+      const firstFront = start + outerOverhang + postDepth / 2;
+      const firstBack = firstFront + laneDepth - postDepth;
+      const secondFront = firstBack + postDepth + M(row.frameGap || 0);
+      const lanes = row.type === 'double' ? [[firstFront, firstBack], [secondFront, secondFront + laneDepth - postDepth]] : [[firstFront, firstBack]];
       const xPosts = [0.05];
       const sections = [];
       let x = 0.1;
@@ -260,7 +263,7 @@ function create(container, onAddSection) {
         // The load is centered in the frame. Move the rear protection beyond
         // the frame edge by the load overhang so it cannot intersect cargo.
         const rearProjection = M(row.rearProjection ?? Math.max(0, (config.palletDepth - result.frameDepth) / 2));
-        const rear = row.type === 'single' ? back + rearProjection : laneIndex === 0 ? back + rearProjection : front - rearProjection;
+        const rear = row.type === 'single' ? back + postDepth / 2 + rearProjection : laneIndex === 0 ? back + postDepth / 2 + rearProjection : front - postDepth / 2 - rearProjection;
         const rearProtection = row.rearProtection ?? config.rearProtection ?? 'none';
         if (rearProtection === 'mesh') {
           box(length / 2, height / 2, rear, length, height, 0.016, materials.rearMesh);
@@ -270,7 +273,7 @@ function create(container, onAddSection) {
         } else if (rearProtection === 'backstops') {
           result.levelsData.forEach(level => box(length / 2, M(level.supportElevation) + 0.35, rear, length, 0.07, 0.08, materials.galva));
         }
-        const aisleSide = laneIndex === 0 ? front : back;
+        const aisleSide = laneIndex === 0 ? front - postDepth / 2 : back + postDepth / 2;
         if (config.protection === 'polymer') xPosts.forEach(postX => plasticTube(postX, aisleSide));
         if (config.protection === 'barrier') box(length / 2, 0.28, aisleSide + (laneIndex === 0 ? -0.16 : 0.16), length, 0.15, 0.1, materials.guard, true);
       });
