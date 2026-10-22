@@ -64,6 +64,7 @@ function create(container, onAddSection) {
     load: new THREE.MeshStandardMaterial({ color: '#a4bfa9', roughness: 0.84 }),
     loadAlt: new THREE.MeshStandardMaterial({ color: '#b7c8ac', roughness: 0.84 }),
     loadEdge: new THREE.MeshStandardMaterial({ color: '#7c9f88', roughness: 0.9 }),
+    loadOverhang: new THREE.MeshStandardMaterial({ color: '#557d72', roughness: 0.72 }),
     guard: new THREE.MeshStandardMaterial({ color: '#e6b900', metalness: 0.1, roughness: 0.55, side: THREE.DoubleSide }),
     guardRim: new THREE.MeshStandardMaterial({ color: '#a67e00', roughness: 0.62 }),
     mesh: new THREE.MeshStandardMaterial({ color: '#6dada8', transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }),
@@ -100,13 +101,20 @@ function create(container, onAddSection) {
     mesh.castShadow = false;
     model.add(mesh);
   }
-  function pallet(x, z, supportY, level, width, depth, alternate) {
+  function pallet(x, z, supportY, level, width, depth, frameDepth, alternate) {
     const palletHeight = 0.115;
     box(x, supportY + 0.04, z, width * 0.94, 0.08, depth * 0.98, materials.wood, true);
     for (const offset of [-0.28, 0, 0.28]) box(x, supportY + 0.09, z + depth * offset, width * 0.94, 0.03, depth * 0.18, materials.woodLight);
     const cargoHeight = Math.max(0.1, M(level.loadHeight) - palletHeight);
     box(x, supportY + palletHeight + cargoHeight / 2, z, width * 0.88, cargoHeight, depth * 0.96, alternate ? materials.loadAlt : materials.load, true);
+    box(x, supportY + palletHeight + cargoHeight / 2, z - depth * 0.482, width * 0.88, cargoHeight, 0.014, materials.loadEdge);
     box(x, supportY + palletHeight + cargoHeight / 2, z + depth * 0.482, width * 0.88, cargoHeight, 0.014, materials.loadEdge);
+    const overhang = Math.max(0, (depth - frameDepth) / 2);
+    if (overhang > 0.001) {
+      const bandDepth = Math.min(0.028, overhang * 0.9);
+      box(x, supportY + palletHeight + cargoHeight * 0.52, z - (depth / 2 - overhang / 2), width * 0.9, 0.018, bandDepth, materials.loadOverhang);
+      box(x, supportY + palletHeight + cargoHeight * 0.52, z + (depth / 2 - overhang / 2), width * 0.9, 0.018, bandDepth, materials.loadOverhang);
+    }
   }
   function decking(type, x1, x2, z1, z2, y) {
     if (type === 'none') return;
@@ -181,6 +189,10 @@ function create(container, onAddSection) {
   }
   function update(config, result) {
     clearModel();
+    const overhangMm = Math.max(0, (config.palletDepth - result.frameDepth) / 2);
+    floorLabel.textContent = overhangMm > 0
+      ? `PALETA 01 NA POSADZCE · RAMA ${Math.round(result.frameDepth)} MM · ŁADUNEK ${Math.round(config.palletDepth)} MM · WYSTĘP ${Math.round(overhangMm)} MM / STRONĘ`
+      : `PALETA 01 NA POSADZCE · RAMA ${Math.round(result.frameDepth)} MM · ŁADUNEK W OBRYSIE RAMY`;
     const maxLength = M(Math.max(1, ...result.rows.map(row => row.nominalLength)));
     const totalDepth = M(Math.max(1, result.overallDepth));
     const height = M(result.rackHeight);
@@ -241,7 +253,7 @@ function create(container, onAddSection) {
             for (let position = 0; position < section.positions; position++) {
               const centerX = x1 + clearance + palletWidth * 0.5 + position * (palletWidth + clearance);
               if (centerX + palletWidth / 2 > x2 + 0.002) continue;
-              pallet(centerX, z, supportY, level, palletWidth, loadDepth, (position + levelIndex + sectionIndex) % 2);
+              pallet(centerX, z, supportY, level, palletWidth, loadDepth, laneDepth, (position + levelIndex + sectionIndex) % 2);
             }
           });
         });
