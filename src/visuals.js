@@ -80,14 +80,13 @@ function drawPlan(svg, config, result, selectedId, onSelect, onAddSection) {
       });
     }
     add(svg, 'line', {x1:x0+rackWidth-2,y1:y+5,x2:x0+rackWidth-2,y2:y+rowHeight-5,stroke:COLORS.post,'stroke-width':3,class:'post-plan'});
-    if (config.protection === 'barrier') {
-      const guardYs = row.type === 'double' ? [y+2,y+rowHeight-2] : [y+2];
-      guardYs.forEach(guardY => add(svg,'line',{x1:x0+5,y1:guardY,x2:x0+rackWidth-5,y2:guardY,stroke:COLORS.guard,'stroke-width':3,class:'barrier-plan'}));
-    }
-    if (config.protection === 'polymer') {
+    if (config.protection === 'barrier' || config.protection === 'polymer') {
       postXs.push(x0+rackWidth-2);
       const guardYs = row.type === 'double' ? [y+7,y+rowHeight-7] : [y+7];
-      postXs.forEach(postX => guardYs.forEach(guardY => add(svg, 'circle', {cx:postX,cy:guardY,r:5.5,fill:COLORS.guardLight,'fill-opacity':.92,stroke:COLORS.guard,'stroke-width':1.5,class:'post-guard-plan'})));
+      postXs.forEach(postX => guardYs.forEach(guardY => {
+        if (config.protection === 'barrier') add(svg, 'rect', {x:postX-5,y:guardY-5,width:10,height:10,fill:COLORS.guard,stroke:'#987500','stroke-width':1.2,class:'steel-post-guard-plan'});
+        else add(svg, 'circle', {cx:postX,cy:guardY,r:5.5,fill:COLORS.guardLight,'fill-opacity':.92,stroke:COLORS.guard,'stroke-width':1.5,class:'post-guard-plan'});
+      }));
     }
     if (row.type === 'double') {
       const labelWidth = Math.min(220, rackWidth - 12);

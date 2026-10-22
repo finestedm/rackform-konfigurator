@@ -227,7 +227,7 @@ function renderLevelModalRows() {
   levelModalDraft.levelDetails.forEach((detail, index) => {
     const row = document.createElement('tr');
     const number = document.createElement('th'); number.scope = 'row'; number.textContent = String(index);
-    const inputCell = (key, step) => { const cell = document.createElement('td'); const unit = document.createElement('div'); unit.className = 'input-unit'; const input = document.createElement('input'); input.type = 'number'; input.min = '300'; input.max = '4000'; input.step = String(step); input.value = detail[key]; input.setAttribute('aria-label', `${key === 'clearHeight' ? 'Światło' : 'Ładunek'}, poziom ${index}`); input.addEventListener('change', () => { const value = numberValue(input.value, 300, 4000); detail[key] = key === 'clearHeight' ? Math.round(value / LEVEL_STEP) * LEVEL_STEP : value; input.value = detail[key]; }); const suffix = document.createElement('b'); suffix.textContent = 'mm'; unit.append(input, suffix); cell.append(unit); return cell; };
+    const inputCell = (key, step) => { const cell = document.createElement('td'); const unit = document.createElement('div'); unit.className = 'input-unit'; const input = document.createElement('input'); input.type = 'number'; input.min = '300'; input.max = '4000'; input.step = String(step); input.value = detail[key]; input.setAttribute('aria-label', `${key === 'clearHeight' ? 'Światło' : 'Ładunek'}, poziom ${index}`); input.addEventListener('change', () => { const value = numberValue(input.value, 300, 4000); if (key === 'clearHeight') { detail.clearHeight = Math.round(value / LEVEL_STEP) * LEVEL_STEP; detail.loadHeight = Math.max(300, detail.clearHeight - VERTICAL_CLEARANCE); } else { detail.loadHeight = value; detail.clearHeight = Math.ceil((detail.loadHeight + VERTICAL_CLEARANCE) / LEVEL_STEP) * LEVEL_STEP; } renderLevelModalRows(); }); const suffix = document.createElement('b'); suffix.textContent = 'mm'; unit.append(input, suffix); cell.append(unit); return cell; };
     const clear = inputCell('clearHeight', LEVEL_STEP); const load = inputCell('loadHeight', 10);
     const decking = document.createElement('td');
     if (index === 0) decking.textContent = 'Posadzka';
@@ -299,6 +299,7 @@ function drawFront(result, rowOverride, svgOverride) {
     addSvg(svg,'rect',{x:xPos,y:topY,width:post,height:baseY-topY,fill:COLORS.post,class:'post-front'});
     for(let y=topY+10;y<baseY;y+=12)addSvg(svg,'rect',{x:xPos+post/2-1,y,width:2,height:3,fill:'#a6b8b5'});
     if (state.protection === 'polymer') addSvg(svg,'rect',{x:xPos-4,y:baseY-19,width:post+8,height:19,rx:3,fill:COLORS.guardLight,'fill-opacity':.95,stroke:COLORS.guard,'stroke-width':1.5,class:'post-guard-front'});
+    if (state.protection === 'barrier') { addSvg(svg,'rect',{x:xPos-5,y:baseY-23,width:post+10,height:23,fill:COLORS.guard,stroke:'#987500','stroke-width':1.3,class:'steel-post-guard-front'}); addSvg(svg,'rect',{x:xPos-3,y:baseY-21,width:post+6,height:3,fill:'#f4d250','fill-opacity':.9}); }
   };
   sections.forEach((section, i) => {
     drawPost(x);
@@ -327,7 +328,6 @@ function drawFront(result, rowOverride, svgOverride) {
     x = usableX + beamW;
   });
   drawPost(x);
-  if (state.protection === 'barrier') addSvg(svg,'line',{x1:baseX,y1:baseY-7,x2:x+post,y2:baseY-7,stroke:COLORS.guard,'stroke-width':5,class:'barrier-front'});
   addSvg(svg,'line',{x1:baseX-12,y1:baseY+1,x2:x+post+12,y2:baseY+1,stroke:'#698077','stroke-width':2});
   addSvg(svg,'text',{x:baseX,y:24,fill:'#3d575c','font-size':10,'font-family':'DM Sans','font-weight':700},`RZĄD ${result.rows.findIndex(r=>(r.sourceId ?? r.id)===(row.sourceId ?? row.id))+1} / ${row.type==='double'?'REGAŁ PODWÓJNY':'REGAŁ POJEDYNCZY'}`);
   addSvg(svg,'text',{x:720,y:24,'text-anchor':'end',fill:'#83938f','font-size':9,'font-family':'DM Sans'},`${row.levelsData.length} ${countWord(row.levelsData.length,'POZIOM','POZIOMY','POZIOMÓW')} · ${row.sections.length} ${countWord(row.sections.length,'SEKCJA','SEKCJE','SEKCJI')}`);
@@ -350,7 +350,7 @@ function renderPrintSheets(result) {
   container.replaceChildren();
   const deckingNames = {none:'Brak wypełnienia',mesh:'Panel siatkowy',grate:'Krata',bars:'Poprzeczki',board:'Płyta wiórowa'};
   const rearNames = {none:'Brak',mesh:'Wygrodzenie siatkowe pleców',backstops:'Backstopy'};
-  const protectionNames = {none:'Brak osłon',barrier:'Odbojnica',polymer:'Odbojnica z tworzywa'};
+  const protectionNames = {none:'Brak osłon',barrier:'Odbojnica stalowa',polymer:'Odbojnica z tworzywa'};
   result.rows.forEach((row, rowIndex) => {
     const copies = Math.max(1, Number(row.quantity) || 1);
     for (let copyIndex = 0; copyIndex < copies; copyIndex += 1) {
@@ -484,7 +484,7 @@ function render() {
   result.rows.filter(row => row.type === 'double').forEach((row,index) => { const gap = document.createElement('div'); gap.className = 'beam-result-row'; const label = document.createElement('span'); label.textContent = `Regał podwójny ${index + 1} · odstęp ładunków / ram`; const value = document.createElement('strong'); value.textContent = `${format(row.loadGap)} / ${format(row.frameGap)}`; gap.append(label,value); beamResults.append(gap); });
   const depth = document.createElement('div'); depth.className = 'beam-result-row'; depth.innerHTML = `<span>Głębokość układu z korytarzami</span><strong>${format(result.overallDepth)}</strong>`; beamResults.append(depth);
   const deckingNames = {none:'Brak wypełnienia',mesh:'Panel siatkowy',grate:'Krata',bars:'Poprzeczki',board:'Płyta wiórowa'};
-  const protectionNames = {none:'brak osłon',barrier:'odbojnica',polymer:'odbojnica z tworzywa'};
+  const protectionNames = {none:'brak osłon',barrier:'odbojnica stalowa',polymer:'odbojnica z tworzywa'};
   const deckingSummary = [...new Set(result.rows.flatMap(row => row.levelsData.map(level => deckingNames[level.decking] ?? deckingNames.none)))].join(' / ');
   const rearSummary = [...new Set(result.rows.map(row => row.rearProtection).map(value => value === 'mesh' ? 'wygrodzenie siatkowe' : value === 'backstops' ? 'backstopy' : 'brak'))].join(' / ');
   const equipment = document.createElement('div'); equipment.className = 'beam-result-row'; const equipmentLabel = document.createElement('span'); equipmentLabel.textContent = 'Wypełnienie / ochrona'; const equipmentValue = document.createElement('strong'); equipmentValue.textContent = `${deckingSummary} / ${protectionNames[state.protection]} / tył: ${rearSummary}`; equipment.append(equipmentLabel,equipmentValue); beamResults.append(equipment);
@@ -502,7 +502,7 @@ function render() {
   $('#rear-legend-label').textContent = selectedResultRow?.rearProtection ? rearNames[selectedResultRow.rearProtection] : 'Zabezpieczenie tyłu';
   const notices = $('#notices'); notices.replaceChildren();
   result.warnings.forEach((warning,index) => { const div = document.createElement('div'); div.className = `notice${(index === 0 && !result.valid) || warning.includes('obecnie wybrano brak wypełnienia') ? ' error' : ''}`; div.textContent = warning; notices.append(div); });
-  if(state.protection === 'barrier') { const div = document.createElement('div'); div.className = 'notice'; div.textContent = 'Uwzględniono odbojnicę. Jej dokładny obrys i wymagane odstępy trzeba dobrać do ruchu wózka.'; notices.append(div); }
+  if(state.protection === 'barrier') { const div = document.createElement('div'); div.className = 'notice'; div.textContent = 'Uwzględniono stalowe osłony słupów przy stronach obsługiwanych przez wózek. Ich wymiary, kotwienie i wymaganą odległość należy dobrać do ruchu wózka.'; notices.append(div); }
   if(state.protection === 'polymer') { const div = document.createElement('div'); div.className = 'notice'; div.textContent = 'Odbojnica z tworzywa jest tubą zakładaną na słup. Wymiary i sposób montażu należy dobrać do konkretnego produktu oraz ruchu wózka.'; notices.append(div); }
 }
 

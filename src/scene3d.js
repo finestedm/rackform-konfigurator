@@ -147,6 +147,10 @@ function create(container, onAddSection) {
     rim.position.set(x, height + 0.02, z);
     model.add(rim);
   }
+  function steelPostGuard(x, z) {
+    box(x, 0.17, z, 0.28, 0.34, 0.28, materials.guard, true);
+    box(x, 0.35, z, 0.29, 0.025, 0.29, materials.guardRim);
+  }
   function addMarker(position, className, text, title, onClick) {
     const element = document.createElement(onClick ? 'button' : 'span');
     element.className = className;
@@ -276,7 +280,7 @@ function create(container, onAddSection) {
         }
         const aisleSide = laneIndex === 0 ? front - postDepth / 2 : back + postDepth / 2;
         if (config.protection === 'polymer') xPosts.forEach(postX => plasticTube(postX, aisleSide));
-        if (config.protection === 'barrier') box(length / 2, 0.28, aisleSide + (laneIndex === 0 ? -0.16 : 0.16), length, 0.15, 0.1, materials.guard, true);
+        if (config.protection === 'barrier') xPosts.forEach(postX => steelPostGuard(postX, aisleSide));
       });
       addMarker([length + 0.15, rowHeight * 0.55, (start + end) / 2], 'scene3d-add', '+', `Dodaj sekcję do regału ${rowIndex + 1}`, () => onAddSection(row.sourceId ?? row.id));
     });
