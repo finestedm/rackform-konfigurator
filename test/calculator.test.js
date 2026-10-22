@@ -139,4 +139,6 @@ test('wypełnienie poziomów i zabezpieczenie tyłu są niezależne dla konfigur
   assert.match(result.warnings.join(' '), /poziomach: 2/);
   const projected = calculate({palletWidth:800,palletDepth:1200,palletHeight:1400,levels:1,standard:'standard',truck:'reach',frameDepth:1100,racks:[{id:3,type:'single',sections:[2],rearProtection:'mesh'}]});
   assert.equal(projected.rows[0].rearProjection, 50);
+  const projectedBackstop = calculate({palletWidth:800,palletDepth:1200,palletHeight:1400,levels:1,standard:'standard',truck:'reach',frameDepth:1100,racks:[{id:4,type:'single',sections:[2],rearProtection:'backstops'}]});
+  assert.equal(projectedBackstop.rows[0].rearProjection, 50);
 });
